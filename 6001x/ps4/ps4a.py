@@ -71,8 +71,19 @@ def getWordScore(word, n):
     n: integer (HAND_SIZE; i.e., hand size required for additional points)
     returns: int >= 0
     """
-    # TO DO ... <-- Remove this comment when you code this function
+    # List comprehension for sum of scores for each letter
+    score = sum(SCRABBLE_LETTER_VALUES[c] for c in word.lower())
 
+    # Store the length since we'll use it more than once
+    word_len = len(word)
+
+    # Score times the number of letters
+    score *= word_len
+
+    # Plus 50 bonus points if used all letters on the first play (n == 7)
+    if word_len == n:
+        score += 50
+    return score
 
 
 #
@@ -142,8 +153,10 @@ def updateHand(hand, word):
     hand: dictionary (string -> int)    
     returns: dictionary (string -> int)
     """
-    # TO DO ... <-- Remove this comment when you code this function
-
+    _hand = hand.copy()
+    for c in word:
+        _hand[c] -= 1
+    return _hand
 
 
 #
@@ -160,7 +173,25 @@ def isValidWord(word, hand, wordList):
     hand: dictionary (string -> int)
     wordList: list of lowercase strings
     """
-    # TO DO ... <-- Remove this comment when you code this function
+    # Fail quickly if the word is not in the word list
+    if not word in wordList:
+        return False
+
+    # We now know the word is valid, so make sure the player has the letters to spell the word
+    # Make a copy of the hand
+    _hand = hand.copy()
+
+    # Decrement _hand for each letter used
+    for c in word:
+        # Again fail quickly, the first time we see a letter not in _hand
+        #   using .get(c, 0) will work whether c was never in _hand, or it was but we used all of them
+        if _hand.get(c, 0) <= 0:
+            return False
+        else:
+            _hand[c] -= 1
+
+    # Must have passed to reach here
+    return True
 
 
 #
@@ -174,7 +205,7 @@ def calculateHandlen(hand):
     hand: dictionary (string-> int)
     returns: integer
     """
-    # TO DO... <-- Remove this comment when you code this function
+    return sum(hand.values())
 
 
 
@@ -202,32 +233,45 @@ def playHand(hand, wordList, n):
     """
     # BEGIN PSEUDOCODE <-- Remove this comment when you code this function; do your coding within the pseudocode (leaving those comments in-place!)
     # Keep track of the total score
-    
-    # As long as there are still letters left in the hand:
-    
-        # Display the hand
-        
-        # Ask user for input
-        
-        # If the input is a single period:
-        
-            # End the game (break out of the loop)
+    totalScore = 0
 
-            
+    # As long as there are still letters left in the hand:
+    while calculateHandlen(hand) > 0:
+        # Display the hand
+        displayHand(hand)
+
+        # Ask user for input
+        word = input('Enter word, or a "." to indicate that you are finished: ')
+
+        # If the input is a single period:
+        if word == '.':
+            # End the game (break out of the loop)
+            print("Goodbye! ", end="")
+            break
+
         # Otherwise (the input is not a single period):
-        
+        else:
             # If the word is not valid:
-            
+            if not isValidWord(word, hand, wordList):
                 # Reject invalid word (print a message followed by a blank line)
+                print("Invalid word, please try again.")
+                print("")
 
             # Otherwise (the word is valid):
-
+            else:
+                score = getWordScore(word, n)
+                totalScore += score
                 # Tell the user how many points the word earned, and the updated total score, in one line followed by a blank line
-                
-                # Update the hand 
-                
+                print('"{}" earned {} points.  Total: {} points'.format(word, score, totalScore))
+
+                # Update the hand
+                hand = updateHand(hand, word)
 
     # Game is over (user entered a '.' or ran out of letters), so tell user the total score
+    else:
+        print("Ran out of letters. ", end="")
+
+    print("Total score {}".format(totalScore))
 
 
 #

@@ -24,6 +24,29 @@ def test_getWordScore():
 
 # end of test_getWordScore
 
+def test_getWordScore_1():
+    letters = [chr(i) for i in range(97, 123)]
+    for c in letters:
+        assert getWordScore(c, 7) == SCRABBLE_LETTER_VALUES[c]
+        assert getWordScore(c, 1) == SCRABBLE_LETTER_VALUES[c] + 50
+
+        assert getWordScore(c * 2, 3) == 4 * SCRABBLE_LETTER_VALUES[c]
+        assert getWordScore(c * 2, 2) == 4 * SCRABBLE_LETTER_VALUES[c] + 50
+
+        assert getWordScore(c * 3, 4) == 9 * SCRABBLE_LETTER_VALUES[c]
+        assert getWordScore(c * 3, 3) == 9 * SCRABBLE_LETTER_VALUES[c] + 50
+
+        assert getWordScore(c * 4, 5) == 16 * SCRABBLE_LETTER_VALUES[c]
+        assert getWordScore(c * 4, 4) == 16 * SCRABBLE_LETTER_VALUES[c] + 50
+
+        assert getWordScore(c * 5, 6) == 25 * SCRABBLE_LETTER_VALUES[c]
+        assert getWordScore(c * 5, 5) == 25 * SCRABBLE_LETTER_VALUES[c] + 50
+
+        assert getWordScore(c * 6, 7) == 36 * SCRABBLE_LETTER_VALUES[c]
+        assert getWordScore(c * 6, 6) == 36 * SCRABBLE_LETTER_VALUES[c] + 50
+
+        assert getWordScore(c * 7, 7) == 49 * SCRABBLE_LETTER_VALUES[c] + 50
+
 
 def test_updateHand():
     """
