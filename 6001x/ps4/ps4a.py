@@ -238,6 +238,7 @@ def playHand(hand, wordList, n):
     # As long as there are still letters left in the hand:
     while calculateHandlen(hand) > 0:
         # Display the hand
+        print("Current hand: ", end="")
         displayHand(hand)
 
         # Ask user for input
@@ -263,6 +264,7 @@ def playHand(hand, wordList, n):
                 totalScore += score
                 # Tell the user how many points the word earned, and the updated total score, in one line followed by a blank line
                 print('"{}" earned {} points.  Total: {} points'.format(word, score, totalScore))
+                print("")
 
                 # Update the hand
                 hand = updateHand(hand, word)
