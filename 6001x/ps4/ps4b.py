@@ -66,7 +66,7 @@ def compPlayHand(hand, wordList, n):
     # Keep track of the total score
     totalScore = 0
     # As long as there are still letters left in the hand:
-    while (calculateHandlen(hand) > 0) :
+    while calculateHandlen(hand) > 0:
         # Display the hand
         print("Current Hand: ", end=' ')
         displayHand(hand)
@@ -86,7 +86,7 @@ def compPlayHand(hand, wordList, n):
             # Otherwise (the word is valid):
             else :
                 # Tell the user how many points the word earned, and the updated total score 
-                score = getWordScore(word, n)
+                score = wordList[word] + (50 if n == len(word) else 0)
                 totalScore += score
                 print('"' + word + '" earned ' + str(score) + ' points. Total: ' + str(totalScore) + ' points')              
                 # Update hand and show the updated hand to the user
@@ -124,8 +124,48 @@ def playGame(wordList):
 
     wordList: list (string)
     """
-    # TO DO... <-- Remove this comment when you code this function
-    print("playGame not yet implemented.") # <-- Remove this when you code this function
+    hand = None
+    while True:
+        userInput = input("Enter n to deal a new hand, r to replay the last hand, or e to end game: ")
+
+        if userInput == 'e':
+            break
+
+        if userInput == 'n':
+            nextInput = ""
+            while nextInput not in ['u', 'c']:
+                print("")
+                nextInput = input("Enter u to have yourself play, c to have the computer play: ")
+                if nextInput not in ['u', 'c']:
+                    print("Invalid command.")
+                print("")
+
+            hand = dealHand(HAND_SIZE)
+            if nextInput == 'u':
+                playHand(hand, wordList, HAND_SIZE)
+            else:  # nextInput == 'c'
+                compPlayHand(hand, wordList, HAND_SIZE)
+
+        elif userInput == 'r':
+            if hand is None:
+                print("You have not played a hand yet. Please play a new hand first!")
+            else:
+                nextInput = ""
+                while nextInput not in ['u', 'c']:
+                    print("")
+                    nextInput = input("Enter u to have yourself play, c to have the computer play: ")
+                    if nextInput not in ['u', 'c']:
+                        print("Invalid command.")
+                    print("")
+
+                if nextInput == 'u':
+                    playHand(hand, wordList, HAND_SIZE)
+                else:  # nextInput == 'c'
+                    compPlayHand(hand, wordList, HAND_SIZE)
+        else:
+            print("Invalid command.", end="")
+
+        print("")
 
         
 #
@@ -133,6 +173,8 @@ def playGame(wordList):
 #
 if __name__ == '__main__':
     wordList = loadWords()
+    wordList = {w: getWordScore(w, -1) for w in wordList}
+#    print(wordList["juku"])
     playGame(wordList)
 
 
