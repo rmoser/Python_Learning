@@ -48,6 +48,10 @@ def test_pm0():
     assert m.get_message_text() == string.ascii_letters
     assert m.get_message_text_encrypted() == string.ascii_letters
 
-def text_CiphertextMessage():
+
+def test_CiphertextMessage():
     assert ps5.CiphertextMessage('jgnnq').decrypt_message() == (24, 'hello')
+    assert ps5.CiphertextMessage('JGNNQ').decrypt_message() == (24, 'HELLO')
+    assert ps5.CiphertextMessage('zdqghuoxvw').decrypt_message() == (23, 'wanderlust')
+    assert ps5.CiphertextMessage('JGNNQ 55').decrypt_message() == (24, 'HELLO 55')
 

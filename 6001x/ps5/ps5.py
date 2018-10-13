@@ -147,8 +147,7 @@ class PlaintextMessage(Message):
         Hint: consider using the parent class constructor so less 
         code is repeated
         '''
-        self.message_text = text
-        self.valid_words = load_words(WORDLIST_FILENAME)
+        Message.__init__(self, text)
         self.shift = shift
         self.encrypting_dict = self.build_shift_dict(self.shift)
         self.message_text_encrypted = self.apply_shift(self.shift)
@@ -206,7 +205,7 @@ class CiphertextMessage(Message):
             self.message_text (string, determined by input text)
             self.valid_words (list, determined using helper function load_words)
         '''
-        pass #delete this line and replace with your code here
+        Message.__init__(self, text)
 
     def decrypt_message(self):
         '''
@@ -224,7 +223,15 @@ class CiphertextMessage(Message):
         Returns: a tuple of the best shift value used to decrypt the message
         and the decrypted message text using that shift value
         '''
-        pass #delete this line and replace with your code here
+        scores = [0] * 26  # Init with zeroes
+        pm = PlaintextMessage(self.get_message_text(), 0)
+        for shift in range(26):
+            pm.change_shift(shift)
+            scores[shift] = sum(is_word(self.get_valid_words(), word) for word in pm.get_message_text_encrypted().split())
+        best = max(scores)
+        shift = scores.index(best)
+        pm.change_shift(shift)
+        return(shift, pm.get_message_text_encrypted())
 
 #Example test case (PlaintextMessage)
 plaintext = PlaintextMessage('hello', 2)
