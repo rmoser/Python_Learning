@@ -5,14 +5,14 @@ class Car:
         self.speed = 0
         self.odometer = 0
         self.time = 0
-        self.max_speed = 0
+        self.max_speed = 250
 
     def say_state(self):
         print("I'm going {} kph!".format(self.speed))
 
     def accelerate(self):
         self.speed += 5
-        if self.speed > self.max_speed: self.max_speed = self.speed
+        if self.speed > self.max_speed: self.speed = self.max_speed
         print("Faster!")
 
     def brake(self):
@@ -34,8 +34,16 @@ class Car:
         print("I reached {} kph".format(self.max_speed))
         print("Fuel burned: {} liters.".format(0))
 
+class Moped(Car):
+    def __init__(self):
+        self.speed = 0
+        self.odometer = 0
+        self.time = 0
+        self.max_speed = 15
+
 if __name__ == '__main__':
-    my_car = Car()
+    my_car = Moped()
+
     print("I'm a Tesla Model S (tm)!")
 
     _q = True

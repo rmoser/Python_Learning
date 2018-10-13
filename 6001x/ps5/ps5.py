@@ -34,9 +34,9 @@ def is_word(word_list, word):
     Returns: True if word is in word_list, False otherwise
 
     Example:
-    >>> is_word(word_list, 'bat') returns
+    > is_word(word_list, 'bat') returns
     True
-    >>> is_word(word_list, 'asdf') returns
+    > is_word(word_list, 'asdf') returns
     False
     '''
     word = word.lower()
@@ -102,7 +102,14 @@ class Message(object):
         Returns: a dictionary mapping a letter (string) to 
                  another letter (string). 
         '''
-        pass #delete this line and replace with your code here
+        lc = string.ascii_lowercase
+        uc = string.ascii_uppercase
+        dict = {}
+        for i, c in enumerate(lc):
+            dict[c] = lc[(i + shift) % 26]
+        for i, c in enumerate(uc):
+            dict[c] = uc[(i + shift) % 26]
+        return dict
 
     def apply_shift(self, shift):
         '''
@@ -116,7 +123,8 @@ class Message(object):
         Returns: the message text (string) in which every character is shifted
              down the alphabet by the input shift
         '''
-        pass #delete this line and replace with your code here
+        d = self.build_shift_dict(shift)
+        return "".join(d.get(c, c) for c in self.get_message_text())
 
 class PlaintextMessage(Message):
     def __init__(self, text, shift):
