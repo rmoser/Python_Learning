@@ -1,14 +1,6 @@
 import ps5
 import string
 
-# Override file location
-ps5.WORDLIST_FILENAME = r"F:\Users\Bob\Documents\Git\Python_Learning\6001x\ps5\words.txt"
-
-def test_PlaintextMessage():
-    assert ps5.PlaintextMessage('hello', 2).get_message_text_encrypted() == 'jgnnq'
-
-def text_CiphertextMessage():
-    assert ps5.CiphertextMessage('jgnnq').decrypt_message() == (24, 'hello')
 
 def test_build_shift_dict():
     m = ps5.Message("")
@@ -36,3 +28,26 @@ def test_apply_shift():
     assert m.apply_shift(0) == 'Hawaii 5-0'
     assert m.apply_shift(1) == 'Ibxbjj 5-0'
     assert m.apply_shift(2) == 'Jcyckk 5-0'
+
+
+def test_pm0():
+    m = ps5.PlaintextMessage(string.ascii_letters, 0)
+
+    assert m.get_message_text() == string.ascii_letters
+    assert m.get_message_text_encrypted() == string.ascii_letters
+
+    m.change_shift(1)
+    assert m.get_message_text() == string.ascii_letters
+    assert m.get_message_text_encrypted() == string.ascii_lowercase[1:] + 'a' + string.ascii_uppercase[1:] + 'A'
+
+    m.change_shift(3)
+    assert m.get_message_text() == string.ascii_letters
+    assert m.get_message_text_encrypted() == string.ascii_lowercase[3:] + 'abc' + string.ascii_uppercase[3:] + 'ABC'
+
+    m.change_shift(0)
+    assert m.get_message_text() == string.ascii_letters
+    assert m.get_message_text_encrypted() == string.ascii_letters
+
+def text_CiphertextMessage():
+    assert ps5.CiphertextMessage('jgnnq').decrypt_message() == (24, 'hello')
+
