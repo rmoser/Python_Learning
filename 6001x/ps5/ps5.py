@@ -233,6 +233,11 @@ class CiphertextMessage(Message):
         pm.change_shift(shift)
         return(shift, pm.get_message_text_encrypted())
 
+
+def decrypt_story():
+    cm = CiphertextMessage(get_story_string())
+    return cm.decrypt_message()
+
 #Example test case (PlaintextMessage)
 plaintext = PlaintextMessage('hello', 2)
 print('Expected Output: jgnnq')
