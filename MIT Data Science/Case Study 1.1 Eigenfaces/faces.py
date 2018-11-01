@@ -55,12 +55,13 @@ def read_pic(filename):
     # Returns numpy 2-d matrix with image data
     pic = PIL.Image.open(filename)
     pic.load()
-    pic = PIL.ImageOps.equalize(pic)
+    # pic = PIL.ImageOps.equalize(pic)
 
     global size
     size = pic.size  # PIL size returns pixels in (y, x)
 
-    return np.asarray(pic, dtype="int32").reshape(pic.size)
+#    return np.asarray(pic, dtype="uint8").reshape(pic.size)
+    return np.asarray(pic).reshape(pic.size)
 
 
 
@@ -81,7 +82,8 @@ def show_pic(image):
             # axarr will not be a matrix
             axarr.imshow(img, plt.cm.gray)
         else:
-            axarr[r,c].imshow(img, plt.cm.gray)
+            # axarr[r, c].imshow(img, plt.cm.gray)
+            axarr[r, c].imshow(img, plt.cm.gray)
 
     plt.show()
 
@@ -147,31 +149,56 @@ def get_norm_pic(pic):
     # Some matrix ops need to be told to operate on a list of matrices
     # Assume the data stored in matrices, not arrays
     # So the last two dimensions define the matrix
-    axes = tuple(np.arange(np.ndim(pic))[-2:])
+    itr_axes = tuple(np.arange(np.ndim(pic))[:-2])
+    mat_axes = tuple(np.arange(np.ndim(pic))[-2:])
 
     # Use this to reshape mean and std so regular math operators cast correctly
     shape = np.shape(pic)[:-2] + (1, 1)
 
     # Overall mean and stddev
-    um = get_mean_pic(pic)
-    us = get_std_pic(pic)
+    # um = get_mean_pic(pic)
+    # us = get_std_pic(pic)
 
+    # I think um and us are single values in the psuedocode...nope
+    um = np.mean(pic)
+    us = np.std(pic)
+
+    # I think um and us are per-pic values in the psuedocode...nope
+    # um = np.mean(pic, axis=itr_axes).reshape(shape)
+    # us = np.std(pic, axis=itr_axes).reshape(shape)
+
+    # Per-pic mean and  std
+    m = np.mean(pic, axis=mat_axes).reshape(shape)
+    s = np.std(pic, axis=mat_axes).reshape(shape)
     # Normalize each pic
-    return (pic - np.mean(pic, axis=axes).reshape(shape)) * us / np.std(pic, axis=axes).reshape(shape) + um
+    # return (pic - m) * us / s + um
+    return um + (pic - m) * us / s
 
 
 def norm_vecs(mat):
+    # Get normalization value: length of the n-dimensional eigenvector
+    # linalg.norm assumes the entire matrix is one dataset, so we need to tell it the axes that represent datasets
+    mat_rss = rss(mat)
+
+    # Normalize the matrix: divide by
+    return mat / mat_rss
+
+def rss(mat):
+    n = np.ndim(mat) - 1
     # Some matrix ops need to be told to operate on a list of matrices
     # Assume the data stored in matrices, not arrays
     # So the last two dimensions define the matrix
-    axes = tuple(np.arange(np.ndim(mat))[-2:])
+    axes = tuple(np.arange(np.ndim(mat))[-n:])
 
-    # Get normalization value: length of the n-dimensional eigenvector
-    # linalg.norm assumes the entire matrix is one dataset, so we need to tell it the axes that represent datasets
-    mat_rss = np.linalg.norm(mat, axis=axes)
+    # Use this to reshape mean and std so regular math operators cast correctly
+    shape = np.shape(mat)[:-2] + (1, 1)
+    return np.linalg.norm(mat, axis=axes).reshape(shape)
 
-    # Normalize the matrix: divide by
-    return np.divide(mat, mat_rss)
+
+def transpose_pic(pic):
+    axes = np.arange(np.ndim(pic))
+    # Regular numpy transpose does not broadcast properly, but swapaxes does the right thing
+    return np.swapaxes(pic, axes[-1], axes[-2])
 
 
 if __name__ == '__main__':
@@ -183,18 +210,27 @@ if __name__ == '__main__':
 
     pics_mean = get_mean_pic(pics)
 
-    norm_pics = get_norm_pic(pics)
+    # norm_pics = get_norm_pic(pics)
+    # Normalize by just subtracting the mean
+    norm_pics = pics - pics_mean
 
-    L = np.array([np.matmul(A, A.T) for A in norm_pics])
+    # Flatten so we can make covariance matrix
+    A = np.asmatrix([a.flatten() for a in norm_pics])
+    L = A * A.T
 
+    # Looks like the eigenvectors come back normalized already
     (eigvals, eigvecs) = np.linalg.eig(L)
 
-    # Normalize eigenvectors
-    rssq = np.sqrt(np.sum(np.square(eigvecs), axis=(1, 2)))
+    # Sort values/vectors here, drop if eigenvalue is zero
 
-    norm_eigvecs = np.array([eigvecs[i] / rssq[i] for i in range(len(eigvecs))])
+    # Keeps the 4 largest eigenvalues
+    # keep = np.argsort(eigvals)[-1:-5:-1]  # Last 4 indices, reversed
+    # eigvals = eigvals[keep]
+    # eigvecs = np.asarray([e[0, keep] for e in eigvecs])
 
-    for i in range(len(norm_eigvecs)):
-        pass
+    X = A.T * eigvecs
+    Y = X / np.sqrt(eigvals)
+    C = np.array([y.reshape((300,300)) for y in Y.T])
 
-    rssq = np.sqrt(np.sum(np.square(eigvals), axis=1))
+
+
