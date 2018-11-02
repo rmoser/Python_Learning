@@ -210,9 +210,17 @@ if __name__ == '__main__':
 
     pics_mean = get_mean_pic(pics)
 
+    # M/S are mean and sigma of values for the overall mean pic
+    M = np.mean(pics_mean)
+    S = np.std(pics_mean)
+
+    # m/s are mean and sigma of each pic
+    m = np.mean(pics, axis=(1, 2))
+    s = np.std(pics, axis=(1, 2))
+
     # norm_pics = get_norm_pic(pics)
     # Normalize by just subtracting the mean
-    norm_pics = pics - pics_mean
+    norm_pics = np.asarray([(pics[i] - m[i]) * S / s[i] + M for i in range(len(pics))])
 
     # Flatten so we can make covariance matrix
     A = np.asmatrix([a.flatten() for a in norm_pics])
