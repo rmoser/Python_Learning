@@ -32,38 +32,45 @@ def read_data(file):
 
 
 def read_soup(file):
-    if not Path(file).exists():
+    f = Path(file)
+
+    if not f.exists():
         print("ERROR: File not found: {}".format(file))
         raise FileExistsError
 
-    with open(file) as f:
-        return BeautifulSoup(f, "html.parser")
+    return BeautifulSoup(f.read_text('utf-8'), "html.parser", )
 
 
 def get_MIT_faculty_list():
 
-    # Use the abstract file list if it exists
+    # Use the downloaded html file if it exists
+    file = "Faculty.html"
     data = Path(out)
-    if data.exists():
+    f = data.joinpath(file)
+    if f.exists():
         # Path.stem is the filename with no extension
         # Which is exactly the professor's name
         # Replace '_' with ' ' so the data is the same, regardless of which source was used
-        return [f.stem.replace('_', ' ') for f in data.glob("*.txt")]
+        soup = read_soup(f)
 
-    # Otherwise, scrape the list from the MIT EECS faculty web site
-    url = r'https://www.eecs.mit.edu/people/faculty-advisors'
+    else:
+        # Otherwise, scrape the list from the MIT EECS faculty web site
+        url = r'https://www.eecs.mit.edu/people/faculty-advisors'
 
-    # Read the full HTML of the site
-    text = urllib.request.urlopen(url).read()
+        # Read the full HTML of the site
+        text = urllib.request.urlopen(url).read()
 
-    # Parse with BeautifulSoup
-    soup = BeautifulSoup(text, 'html.parser')
+        # Parse with BeautifulSoup
+        soup = BeautifulSoup(text, 'html.parser')
 
     # Prof names are in views-field views-field-title
     # Then remove all whitespace and
     #   downgrade all chars to simple A-Za-z,
     #   since we know that will work as input to the abstract search engine
-    return [unidecode(t.text.strip()) for t in soup.find_all("div", "views-field views-field-title")]
+    names = [unidecode(t.text.strip()) for t in soup.find_all("span", "field-content card-title")]
+    depts = [t.text.split(',')[0].strip() for t in soup.find_all("div", "views-field views-field-term-node-tid")]
+
+    return dict(zip(names, depts))
 
 
 def get_arXiv_abstract_list(prof):
@@ -87,6 +94,7 @@ def get_arXiv_abstract_list(prof):
 def save_abstracts():
     profs = get_MIT_faculty_list()
 
+    # get_MIT_faciulty_list returns a dict of name: dept
     for p in profs:
         print(p)
 
@@ -113,16 +121,22 @@ def word_count(text):
 
 
 def build_word_matrix(profs=None):
-    if profs is None:
+    if isinstance(profs, str):
+        profs = [profs]  # Coerce to list
+    elif profs is None or len(profs) == 0:
         profs = get_MIT_faculty_list()
 
     abs_freqs = []
     word_list = []
+    abs_depts = []
     for p in profs:
         print(p)
         for a in read_abstracts(p):
             freqs = word_count(a)
             abs_freqs.append(freqs)
+
+            # Collect list of name, dept FOR EACH ABSTRACT
+            abs_depts.append((p, profs[p]))  # prof's name and dept
             [word_list.append(k) for k in freqs.keys() if k not in word_list]
 
     n_abs = len(abs_freqs)
@@ -137,7 +151,7 @@ def build_word_matrix(profs=None):
     # Initialize word matrix with zeros
     word_matrix = np.zeros((n_abs, n_words), int)
 
-    # Convert word counts to %
+    # Store word counts, not %
     for a in range(n_abs):
         abstract = abs_freqs[a]
         # total = sum(abstract.values())
@@ -147,8 +161,14 @@ def build_word_matrix(profs=None):
 
     wm = pd.DataFrame(word_matrix)
     wm.rename(columns=word_dict, inplace=True)
-    # wm.to_parquet("word_matrix.parquet")
-    # wm.transpose().to_csv("word_matrix.csv")
+
+    wd = pd.DataFrame(abs_depts)
+    wd.rename(columns=dict(enumerate(["PROF_NAME", "PROF_DEPT"])), inplace=True)
+
+    wm = wm.join(wd)
+    wm.set_index(["PROF_NAME", "PROF_DEPT"], inplace=True)
+
+    # Add columns for abstract title and department name, which will be indices so they aren't counted in data operations
 
     return wm
 
