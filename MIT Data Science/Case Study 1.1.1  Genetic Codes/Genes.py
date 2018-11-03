@@ -3,8 +3,11 @@ import sklearn as skl
 import sklearn.decomposition
 import sklearn.preprocessing
 import numpy as np
+import pandas as pd
 import pathlib
 import os
+import matplotlib
+import matplotlib.mlab
 import matplotlib.pyplot as plt
 
 def LoadSeq():
@@ -22,7 +25,9 @@ def CalcFreq(s, chars):
     rows = len(s)//300
     cols = 4**chars
 
-    result = np.zeros(shape=(rows, cols), dtype=np.int)
+
+    names = dict()
+    data = np.zeros(shape=(rows, cols), dtype=np.int)
     # print(result)
 
     for r in range(rows):
@@ -31,70 +36,46 @@ def CalcFreq(s, chars):
         d = {}
         # Split 300-character chunk into words of length(chars)
         for i in range(0, len(chunk), chars):
+            # Each Word w has chars characters
             w = chunk[i:i+chars]
             # Count the frequency of each word in the chunk
             d[w] = d.get(w, 0) + 1
             # print(w, d[w])
 
         for i, k in enumerate(sorted(d)):
+            # See if this codon has been seen already
+            if k not in names:
+                names[k] = len(names)
+
+            col = names[k]  # Get column number assigned to this codon
+
             # print(i, k, d[k])
-            result[r, i] = d[k]
+            data[r, col] = d[k]
             # print(result)
+
+        # order = np.argsort(names.keys())
 
         # print(d)
         # print(result)
 
-    return result
+    return np.asmatrix(data)
 
 def Standardize(m):
     return (m - np.mean(m, axis=0)) / np.std(m, axis=0)
 
 def myPCA(x):
-    pca = sklearn.decomposition.PCA(n_components=2)
-    x_std = sklearn.preprocessing.StandardScaler().fit_transform(x)
-    x_pca = pca.fit_transform(x_std)
 
-    plt.scatter(x_pca.T[0], x_pca.T[1])
+    if False:
+        pca = sklearn.decomposition.PCA()
+        x_std = sklearn.preprocessing.StandardScaler().fit_transform(x)
+        x_pca = pca.fit_transform(x_std)
+
+    mpca = matplotlib.mlab.PCA(x)
+
+    x = np.array(mpca.Y[:, 0]).flatten()
+    y = np.array(mpca.Y[:, 1]).flatten()
+
+    plt.scatter(x, y)
     plt.show()
-
-s = LoadSeq()
-sd = 'atatatatcgcgcgtgtgacacacacacac' * 10
-
-if False:
-    x = CalcFreq(sd, 2)
-
-    #xx = [CalcFreq(s, i+1) for i in range(4)]
-    xx = CalcFreq(s, 3)
-
-    # print(xx)
-    xxT = x.T
-    xxR = np.asarray(x for x in xxT if any(x))
-    print(xxR.__repr__())
-
-    # numpy mean of each column
-    xs = np.sum(xx)
-    # assert xs == [305400, 152700, 101800, 76350]
-
-    xst = Standardize(xx)
-
-    pca = skl.decomposition.PCA(n_components=2)
-
-    xpca = pca.fit_transform(xst)
-
-    plt.scatter(xpca.T[0], xpca.T[1])
-    plt.show()
-
-# xc = [np.cov(x) for x in xx]
-
-# xe = [np.linalg.eig(x) for x in xc]
-
-# print(xe)
-# a = [xe[i][1].dot(xst[i].T) for i in range(len(xx))]
-
-# print(a)
-
-#print(xx2)
-#print(xx3)
-#print(xx4)
 
 
