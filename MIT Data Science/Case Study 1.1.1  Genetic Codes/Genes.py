@@ -64,16 +64,20 @@ def Standardize(m):
     return (m - np.mean(m, axis=0)) / np.std(m, axis=0)
 
 def myPCA(x):
+    use_sklearn = True
 
-    if False:
-        pca = sklearn.decomposition.PCA()
-        x_std = sklearn.preprocessing.StandardScaler().fit_transform(x)
-        x_pca = pca.fit_transform(x_std)
+    if use_sklearn:
+        pca = sklearn.decomposition.PCA(n_components=2)
+        pca.fit(x)
+        pc = pca.fit_transform(x)
+        x = pc[:, 0]
+        y = pc[:, 1]
 
-    mpca = matplotlib.mlab.PCA(x)
+    else:
+        mpca = matplotlib.mlab.PCA(x)
 
-    x = np.array(mpca.Y[:, 0]).flatten()
-    y = np.array(mpca.Y[:, 1]).flatten()
+        x = np.array(mpca.Y[:, 0]).flatten()
+        y = np.array(mpca.Y[:, 1]).flatten()
 
     plt.scatter(x, y)
     plt.show()
