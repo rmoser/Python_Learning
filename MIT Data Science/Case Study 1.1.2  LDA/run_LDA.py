@@ -1,6 +1,6 @@
 # Script to  actually run the LDA analysis
 
-import lda
+import my_lda
 import pandas as pd
 import argparse
 import stochastic_lda as slda
@@ -29,68 +29,118 @@ MAXITER = 10000
 
 class SVILDA():
     def __init__(self, K, alpha, eta, tau, kappa, docs, iterations, parsed=True):
+        # Docs variables
         self._docs = docs
-        self._D = len(self._docs.index)  # docs count
-        self._vocab = dict(zip(docs.columns, range(self._D)))
-        self._V = len(self._vocab)  # word count
+        self._D = len(self._docs.index)  # Count of docs
+        self._vocab = dict(zip(docs.columns, range(self._D)))  # Maps words to column numbers in arrays & matrices
+        self._V = len(self._vocab)  # Count of words
         self._parsed = isinstance(self._docs, pd.DataFrame)
 
+        # LDA algorithm tuning parameters
         self._K = K
         self._alpha = alpha
         self._eta = eta
         self._tau = tau
         self._kappa = kappa
+        self._iterations = iterations
 
+        # Initialize LDA algorithm state variables
+        self.resetSVI()
+
+        if not (0 < self._kappa <= 1):
+            print(r"\nERROR: kappa must be in the range (0, 1]: {}\n".format(self._kappa))
+
+    def resetSVI(self):
+        # Initialize LDA algorithm state variables
         self._lambda = 1 * n.random.gamma(100., 1. / 100., (self._K, self._V))
         self._Elogbeta = dirichlet_expectation(self._lambda)
         self._expElogbeta = n.exp(self._Elogbeta)
         self.ct = 0
-        self._iterations = iterations
-        print(self._lambda.shape)
         self._trace_lambda = {}
         for i in range(self._K):
             self._trace_lambda[i] = [self.computeProbabilities()[i]]
         self._x = [0]
 
+        print(self._lambda.shape)
+
+    def word_num(self, word, readonly=True):
+        if word not in self._vocab:
+            if readonly is True:
+                return None
+            # Readonly is false, so add the word
+            self._vocab[word] = len(self._vocab)
+
+        # Return the word index
+        return self._vocab[word]
 
     def updateLocal(self, doc):  # word_dn is an indicator variable with dimension V
         # print("words: ", len(words), type(words))
         # print("counts: ", len(counts), type(counts))
 
-        # newdoc is a list of the words, once for each occurance of the word in the doc
-        newdoc = []
-        for word in doc.index:
-            newdoc += [word] * doc[word]
+        newdoctype = 'S'  # S-series or L-list
+
+        if newdoctype == 'S':
+            # newdoc shall be a Pandas Series
+            # Compress to only the words with non-zero frequency
+            newdoc = doc[doc.values > 0]
+
+            assert n.sum(newdoc) == n.sum(doc)
+
+            phi_d = n.zeros((self._K, self._V))  # Topics x Total Words
+            gamma_d = n.random.gamma(100., 1. / 100., (self._K))
+
+            for i in range(self._iterations):
+                Elogtheta_d = dirichlet_expectation(gamma_d)
+                expElogtheta_d = n.exp(Elogtheta_d)
+
+                for word, count in newdoc.items():
+                    w = self.word_num(word)
+                    phi_d[:, w] = n.multiply(expElogtheta_d ** count, self._expElogbeta[:, w]) + 1e-100
+                    phi_d[:, w] = phi_d[:, w] / n.sum(phi_d[:, w])
+
+                gamma_new = self._alpha + n.sum(phi_d, axis=1)
+                meanchange = n.mean(abs(gamma_d - gamma_new))
+                if meanchange < meanchangethresh:
+                    break
+
+                gamma_d = gamma_new
+
+            return phi_d, newdoc, gamma_d
+
+        else:
+            # newdoc is a list of the words, once for each occurrence of the word in the doc
+            newdoc = []
+            for word in doc.index:
+                newdoc += [word] * doc[word]
+
+            # Total words in this doc
+            N_d = n.sum(doc)  # Use doc just to be sure
+
+            assert len(newdoc) == N_d
+
+            phi_d = n.zeros((self._K, N_d))  # Topics x Total Words
+            gamma_d = n.random.gamma(100., 1. / 100., (self._K))
+
+            for i in range(self._iterations):
+                Elogtheta_d = dirichlet_expectation(gamma_d)
+                expElogtheta_d = n.exp(Elogtheta_d)
+
+                for m, word in enumerate(newdoc):
+                    w = self.word_num(word)
+                    phi_d[:, m] = n.multiply(expElogtheta_d, self._expElogbeta[:, w]) + 1e-100
+                    phi_d[:, m] = phi_d[:, m] / n.sum(phi_d[:, m])
+
+                gamma_new = self._alpha + n.sum(phi_d, axis=1)
+                meanchange = n.mean(abs(gamma_d - gamma_new))
+                if meanchange < meanchangethresh:
+                    break
+
+                gamma_d = gamma_new
 
         # print(newdoc)
 
-        # Total words in this doc
-        N_d = n.sum(doc)  # Use doc just to be sure
 
-        assert len(newdoc) == N_d
-
-        phi_d = n.zeros((self._K, N_d))  # Topics x Total Words
-
-        gamma_d = n.random.gamma(100., 1. / 100., (self._K))
-        Elogtheta_d = dirichlet_expectation(gamma_d)
-        expElogtheta_d = n.exp(Elogtheta_d)
-
-        for i in range(self._iterations):
-            for m, word in enumerate(newdoc):
-                w = self._vocab[word]
-                phi_d[:, m] = n.multiply(expElogtheta_d, self._expElogbeta[:, w]) + 1e-100
-                phi_d[:, m] = phi_d[:, m] / n.sum(phi_d[:, m])
-
-            gamma_new = self._alpha + n.sum(phi_d, axis=1)
-            meanchange = n.mean(abs(gamma_d - gamma_new))
-            if meanchange < meanchangethresh:
-                break
-
-            gamma_d = gamma_new
-            Elogtheta_d = dirichlet_expectation(gamma_d)
-            expElogtheta_d = n.exp(Elogtheta_d)
-
-        return phi_d, newdoc, gamma_d
+            return phi_d, newdoc, gamma_d
 
 
     def updateGlobal(self, phi_d, newdoc):
@@ -100,12 +150,21 @@ class SVILDA():
         for k in range(self._K):
             phi_dk = n.zeros(self._V)  # array of length = word count
 
-            # doc is pandas Series
-            for m, word in enumerate(newdoc):
-                # print word
-                # phi_dk[word] += phi_d[k][m]
-                w = self._vocab[word]  # Word index
-                phi_dk[w] += phi_d[k, m]
+            if isinstance(newdoc, pd.Series):
+                # doc is pandas Series with words and counts
+                for word in newdoc.index:
+                    # print word
+                    # phi_dk[word] += phi_d[k][m]
+                    w = self.word_num(word)  # Word index
+                    phi_dk[w] += phi_d[k, w]
+
+            else:
+                # doc is a list of words repeated
+                for m, word in enumerate(newdoc):
+                    # print word
+                    # phi_dk[word] += phi_d[k][m]
+                    w = self.word_num(word)  # Word index
+                    phi_dk[w] += phi_d[k, m]
 
             lambda_d[k] = self._eta + self._D * phi_dk
 
@@ -160,6 +219,7 @@ class SVILDA():
         # For each doc
         for i in range(self._D):
             doc = docs.iloc[i]  # Pandas Series for row i
+            doc = doc[doc.value > 0]  # Drop words with zero counts to speed up the looping
 
             # For each topic
             for j in range(self._K):
@@ -168,7 +228,7 @@ class SVILDA():
                 # For each word
                 for word in doc.index:
                     # Word index in global tables
-                    w = self._vocab[word]
+                    w = self.word_num(word)
 
                     # Collect list of lambda / word probability
                     doc_probability += n.log(self._lambda[j][w] / prob_words[w]) * doc[word]
@@ -197,16 +257,27 @@ class SVILDA():
             approx_mixture = n.dot(gamma_d, self._lambda)
             # print n.shape(approx_mixture)
             approx_mixture = approx_mixture / n.sum(approx_mixture)
+
             log_doc_prob = 0.
 
-            for word in newdoc:
-                w = self._vocab[word]
-                log_doc_prob += n.log(approx_mixture[w]) * newdoc[word]
+            if isinstance(newdoc, pd.Series):
+                newdoc = newdoc[newdoc.values > 0]
+                for word, count in newdoc.items():
+                    w = self.word_num(word)
+                    log_doc_prob += n.log(approx_mixture[w]) * count
 
-            perplexity += log_doc_prob
-            doclen += sum(newdoc)
+                perplexity += log_doc_prob
+                doclen += sum(newdoc)
 
-        # print perplexity, doclen
+            else:
+                for word in newdoc:
+                    w = self.word_num(word)
+                    log_doc_prob += n.log(approx_mixture[w])
+
+                perplexity += log_doc_prob
+                doclen += len(newdoc)
+
+            # print perplexity, doclen
         perplexity = n.exp(- perplexity / doclen)
         print(perplexity)
         return perplexity
@@ -218,7 +289,7 @@ class SVILDA():
 def test(k, iterations):
     #allmydocs = getalldocs("alldocs2.txt")
     profs = ['Elfar Adalsteinsson']
-    allmydocs = lda.build_word_matrix(profs)
+    allmydocs = my_lda.build_word_matrix(profs)
     vocab = list(allmydocs.columns)
 
     testset = SVILDA(vocab=vocab, K=k, D=len(allmydocs), alpha=0.2, eta=0.2, tau=1024, kappa=0.7, docs=allmydocs,
@@ -278,8 +349,8 @@ def main():
     parser.add_argument('-d', '--docs', help='file with list of docs, .txt', default="alldocs.txt", required=False)
     parser.add_argument('-a', '--alpha', help='alpha parameter, defaults to 0.2', default=0.2, required=False)
     parser.add_argument('-e', '--eta', help='eta parameter, defaults to 0.2', default=0.2, required=False)
-    parser.add_argument('-t', '--tau', help='tau parameter, defaults to 0.7', default=0.7, required=False)
-    parser.add_argument('-k', '--kappa', help='kappa parameter, defaults to 1024', default=1024, required=False)
+    parser.add_argument('-t', '--tau', help='tau parameter, defaults to 1024', default=1024, required=False)
+    parser.add_argument('-k', '--kappa', help='kappa parameter, defaults to 0.7', default=0.7, required=False)
     parser.add_argument('-n', '--iterations', help='number of iterations, defaults to 10000', default=10000,
                         required=False)
 
@@ -300,8 +371,8 @@ def main():
     else:
         assert vocab is not None, "no vocab"
         assert docs is not None, "no docs"
-        docs = lda.build_word_matrix()
-        docs = lda.calc_freqs(docs)
+        docs = my_lda.build_word_matrix()
+        docs = my_lda.calc_freqs(docs)
         D = len(docs)
         # vocab = getVocab(vocab)
         vocab = dict(zip(docs.columns, range(docs.shape[1])))

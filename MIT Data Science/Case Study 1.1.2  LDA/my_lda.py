@@ -15,8 +15,15 @@ import pandas as pd
 
 # Store out folder as module variable for now
 os.chdir(r"F:\Users\Bob\Documents\Git\Python_Learning\MIT Data Science\Case Study 1.1.2  LDA")
-out = ".\Data\\"
+data = Path("./Data")
+out = Path("./temp")
 
+# Ensure the folders exist
+if not data.exists():
+    data.mkdir()
+
+if not out.exists():
+    out.mkdir()
 
 def read_data(file):
     text = ""  # Init return value if fail
@@ -45,7 +52,8 @@ def get_MIT_faculty_list():
 
     # Use the downloaded html file if it exists
     file = "Faculty.html"
-    data = Path(out)
+
+    # data is a global Path object pointing to the Data sub folder
     f = data.joinpath(file)
     if f.exists():
         # Path.stem is the filename with no extension
@@ -98,14 +106,14 @@ def save_abstracts():
     for p in profs:
         print(p)
 
-        with open(out + p.replace(" ", "_") + ".txt", "wb") as f:
+        with open(data.joinpath(p.replace(" ", "_") + ".txt"), "wb") as f:
             abs = [s.encode('UTF-8').strip() for s in get_arXiv_abstract_list(p)]
             abs = [s for s in abs if len(s)]
             f.writelines(s + "\n".encode('UTF-8') for s in abs)
 
 
 def read_abstracts(prof):
-    with codecs.open(out + prof.replace(' ', '_') + ".txt", encoding='UTF-8') as f:
+    with codecs.open(data.joinpath(prof.replace(' ', '_') + ".txt"), encoding='UTF-8') as f:
         abstracts = f.readlines()
         return abstracts
 
@@ -173,58 +181,81 @@ def build_word_matrix(profs=None):
     return wm
 
 
+def clean_words(dataframe):
+    # lda.build_word_matrix()
+
+    # Discard words that are too common or too rare, based on these thresholds
+    too_common = 0.3
+    too_rare = 0.02
+
+    if dataframe is None:
+        try:
+            df = pd.read_parquet(out.joinpath('word_matrix.parquet'))
+        except:
+            df = build_word_matrix()
+    else:
+        df = dataframe.copy()
+
+    # Look at percentage of abstracts within which each word appears
+    n = len(df.index)  # Number of abstracts
+    drop_words = []
+
+    for word in sorted(df.columns):
+        word_abs_freq = sum(df[word] > 0) / n
+        if len(word) < 3:
+            print("DROP: ", word, len(word))
+            drop_words.append(word)
+        elif not (too_rare < word_abs_freq < too_common):
+            print("DROP: ", word, word_abs_freq)
+            drop_words.append(word)
+        elif word_abs_freq == 0:
+            # Make sure we drop any words that somehow do not exist
+            print("DROP: ", word, word_abs_freq)
+            drop_words.append(word)
+        else:
+            print("    : ", word, word_abs_freq)
+
+    if len(drop_words) > 0:
+        df.drop(drop_words, axis=1, inplace=True)
+
+    return df
+
+
 def calc_freqs(dataframe):
     # lda.build_word_matrix()
 
     if dataframe is None:
         try:
-            dataframe = pd.read_parquet('word_matrix.parquet')
+            df = pd.read_parquet(out.joinpath('word_matrix.parquet'))
         except:
-            wm = build_word_matrix()
+            df = build_word_matrix()
+    else:
+        df = dataframe.copy()
 
-    word_list = dataframe.columns
+    for r in range(len(df.index)):
+        row = df.iloc[r]
+        n = np.sum(row)
+        df.iloc[r] = row / n
 
-    word_dict = {}
-    for i in range(len(dataframe.columns)):
-        word_dict[i] = dataframe.columns[i]
-        word_dict[dataframe.columns[i]] = i
+    return df
 
-    word_freqs_global = {}
-    for word in word_list:
-        word_freqs_global[word] = dataframe[word].sum()
 
-    # New dataframe to calculate word frequencies among the abstracts
-    wf = pd.DataFrame()
-    wf["word"] = word_freqs_global.keys()
+def topic_words(L, n):
+    if not isinstance(n, int):
+        n = 10
 
-    # Index on word so we can sum the values
-    wf.set_index('word', inplace=True)
+    # Show top ten words per topic
+    top_words = np.zeros((L._K, n), dtype=np.object)
+    v = L._vocab
+    rv = {}
+    for word in v:
+        rv[v[word]] = word
 
-    # Add the word counts for each abstract
-    wf["freq"] = word_freqs_global.values()
+    for topic in range(L._K):
+        lam = L._lambda[topic]
+        idx = np.argsort(lam)[:-n-1:-1]
+        words = [rv[w] for w in idx]
+        for rank, word in enumerate(words):
+            top_words[topic, rank] = word
 
-    # Sum of all values is the total number of words
-    total_words = wf.values.sum()
-
-    # Convert word counts to percents, and sort just for easy inspection
-    wf["pct"] = wf.freq / total_words
-    wf.sort_values("freq", inplace=True)
-
-    # Calculate the percentage of abstracts which contain each word
-    wf["pct"] = [np.mean([dataframe[w] > 0]) for w in word_list]
-
-    # Eliminate words which are too rare or too common
-    wf = wf[np.logical_and(wf.pct < 0.3, wf.pct > 0.01)]
-
-    # Clean the main table
-    dataframe = dataframe[list(wf.index.values.astype(str))]
-    del wf
-
-    dataframe.to_parquet('word_matrix_cleaned.parquet')
-
-    # Convert word counts to % of words in each abstract
-    dataframe = dataframe.div(dataframe.sum(axis=1), axis=0)
-
-    dataframe.to_parquet('word_matrix_freqs.parquet')
-
-    return dataframe
+    return top_words
