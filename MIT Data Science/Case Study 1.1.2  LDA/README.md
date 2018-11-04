@@ -15,7 +15,7 @@ See 'Help' using
 ```python stochastic_lda.py -h```
 
 You will need:
-- A file [dictionary.csv] containing your vocabular
+- A file [dictionary.csv] containing your vocabulary
 - A file [doclist.txt] containing the list of documents in the directory that you want to sample from
 - At the moment your documents can be just a normal txt file, no pre-processing required
 

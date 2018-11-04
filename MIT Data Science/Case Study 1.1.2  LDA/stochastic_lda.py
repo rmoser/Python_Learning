@@ -28,7 +28,7 @@ class SVILDA():
 		self.ct = 0
 		self._iterations = iterations
 		self._parsed = parsed
-		print self._lambda.shape
+		print(self._lambda.shape)
 		self._trace_lambda = {}
 		for i in range(self._K):
 			self._trace_lambda[i] = [self.computeProbabilities()[i]]
@@ -91,9 +91,9 @@ class SVILDA():
 
 		for i in range(self._iterations):			
 			randint = random.randint(0, self._D-1)
-			print "ITERATION", i, " running document number ", randint
+			print("ITERATION", i, " running document number ", randint)
 			if self._parsed == False:
-				doc = parseDocument(self._docs[randint],self._vocab)
+				doc = parseDocument(self._docs[randint], self._vocab)
 				phi_doc, newdoc, gamma_d = self.updateLocal(doc)
 				self.updateGlobal(phi_doc, newdoc)
 				self.ct += 1
@@ -101,9 +101,10 @@ class SVILDA():
 
 	def computeProbabilities(self):
 
-		prob_topics = n.sum(self._lambda, axis = 1)
+		prob_topics = n.sum(self._lambda, axis=1)
 		prob_topics = prob_topics/n.sum(prob_topics)
 		return prob_topics
+
 
 	def getTopics(self, docs = None):
 		prob_topics = self.computeProbabilities()
@@ -128,7 +129,7 @@ class SVILDA():
 		perplexity = 0.
 		doclen = 0.
 		if docs == None:
-			docs =  self._docs
+			docs = self._docs
 		for doc in docs:
 			parseddoc = parseDocument(doc, self._vocab)
 			_, newdoc, gamma_d = self.updateLocal(parseddoc)
@@ -142,7 +143,7 @@ class SVILDA():
 			doclen += len(newdoc)
 			# print perplexity, doclen
 		perplexity = n.exp( - perplexity / doclen)
-		print perplexity
+		print(perplexity)
 		return perplexity
 
 	def plotTopics(self, perp):
@@ -186,11 +187,11 @@ def test(k, iterations):
 		temp = zip(lambdak, range(0, len(lambdak)))
 		temp = sorted(temp, key = lambda x: x[0], reverse=True)
 		# print temp
-		print 'topic %d:' % (kk)
+		print('topic %d:' % (kk))
 		# feel free to change the "53" here to whatever fits your screen nicely.
 		for i in range(0, 10):
-			print '%20s  \t---\t  %.4f' % (vocab.keys()[vocab.values().index(temp[i][1])], temp[i][0])
-		print
+			print('%20s  \t---\t  %.4f' % (vocab.keys()[vocab.values().index(temp[i][1])], temp[i][0]))
+		print()
 
 
 	with open("temp/%i_%i_%f_raw.txt" %(k, iterations, perplexity), "w+") as f:
