@@ -65,7 +65,10 @@ def read_pic(filename):
 
 
 
-def show_pic(image):
+def show_pic(image, colormap=0):
+    if colormap is not None and colormap not in dir(plt.cm):
+        colormap = plt.cm.gray
+
     dims = np.ndim(image)
     if dims == 2:
         images = np.array([image])
@@ -80,10 +83,10 @@ def show_pic(image):
 
         if grid == 1:
             # axarr will not be a matrix
-            axarr.imshow(img, plt.cm.gray)
+            axarr.imshow(img)
+
         else:
-            # axarr[r, c].imshow(img, plt.cm.gray)
-            axarr[r, c].imshow(img, plt.cm.gray)
+            axarr[r, c].imshow(img, colormap)
 
     plt.show()
 
@@ -175,24 +178,9 @@ def get_norm_pic(pic):
     return um + (pic - m) * us / s
 
 
-def norm_vecs(mat):
-    # Get normalization value: length of the n-dimensional eigenvector
-    # linalg.norm assumes the entire matrix is one dataset, so we need to tell it the axes that represent datasets
-    mat_rss = rss(mat)
-
-    # Normalize the matrix: divide by
-    return mat / mat_rss
-
 def rss(mat):
-    n = np.ndim(mat) - 1
-    # Some matrix ops need to be told to operate on a list of matrices
-    # Assume the data stored in matrices, not arrays
-    # So the last two dimensions define the matrix
-    axes = tuple(np.arange(np.ndim(mat))[-n:])
-
     # Use this to reshape mean and std so regular math operators cast correctly
-    shape = np.shape(mat)[:-2] + (1, 1)
-    return np.linalg.norm(mat, axis=axes).reshape(shape)
+    return np.linalg.norm(mat)
 
 
 def transpose_pic(pic):
@@ -208,11 +196,13 @@ if __name__ == '__main__':
 
     pics = get_image_data(source)
 
+    N = len(pics)
+
     pics_mean = get_mean_pic(pics)
 
     # M/S are mean and sigma of values for the overall mean pic
-    M = np.mean(pics_mean)
-    S = np.std(pics_mean)
+    MU = np.mean(pics_mean)
+    SIGMA = np.std(pics_mean)
 
     # m/s are mean and sigma of each pic
     m = np.mean(pics, axis=(1, 2))
@@ -220,7 +210,7 @@ if __name__ == '__main__':
 
     # norm_pics = get_norm_pic(pics)
     # Normalize by just subtracting the mean
-    norm_pics = np.asarray([(pics[i] - m[i]) * S / s[i] + M for i in range(len(pics))])
+    norm_pics = np.asarray([(pics[i] - m[i]) * SIGMA / s[i] + MU for i in range(len(pics))])
 
     # Flatten so we can make covariance matrix
     A = np.asmatrix([a.flatten() for a in norm_pics])
@@ -231,14 +221,19 @@ if __name__ == '__main__':
 
     # Sort values/vectors here, drop if eigenvalue is zero
 
-    # Keeps the 4 largest eigenvalues
-    # keep = np.argsort(eigvals)[-1:-5:-1]  # Last 4 indices, reversed
-    # eigvals = eigvals[keep]
-    # eigvecs = np.asarray([e[0, keep] for e in eigvecs])
+    # Sort the eigenvalues
+    keep = np.argsort(eigvals)[::-1]  # argsort returns in ascending order, so we reverse the result
+    keep = [k for k, i in enumerate(keep) if eigvals[i] > 1e-4]
+    eigvals = eigvals[keep]
+    eigvecs = np.asarray([e[0, keep] for e in eigvecs])
 
     X = A.T * eigvecs
     Y = X / np.sqrt(eigvals)
-    C = np.array([y.reshape((300,300)) for y in Y.T])
+    C = np.array([y.reshape((300, 300)) for y in Y.T])
 
+    # Init zeros array
+    omega = np.zeros((N, N))
+    for r in range(N):
+        omega[r] = np.array([C[r].flatten().dot(p.flatten()) for p in pics])
 
-
+    new = pics[1]
