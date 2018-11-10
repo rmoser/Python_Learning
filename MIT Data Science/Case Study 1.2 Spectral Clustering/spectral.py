@@ -7,30 +7,98 @@ from goose3 import Goose
 import newspaper
 import selenium
 from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+
 import codecs
 from pathlib import Path
 
 folder = Path(r"c:\temp\CNN")
-cnn = 'http://www.cnn.com'
+
+cnn = 'https://www.cnn.com'
+nbc = 'https://www.nbcnews.com'
+
+site = cnn
+browser = None
+
+
 # url = 'http://money.cnn.com/2012/02/20/news/economy/david_walker_third_party/index.htm'
 # url = "https://www.npr.org/2018/11/09/666077614/wildfires-wreak-havoc-on-california-including-a-thousand-oaks-still-in-mourning"
 
 
 def get_soup(url):
-    driver = webdriver.Firefox()
-    driver.implicitly_wait(30)
-    driver.get(url)
+    # Use selenium to parse the javascript
+    global browser
+    if browser is None:
+        options = Options()
+        options.headless = True
+        options.preferences["media.autoplay.enabled"] = False
+        browser = webdriver.Firefox(options=options)
+
+        browser.implicitly_wait(30)
+
 
     # Read the full HTML of the site
-    text = driver.page_source
+    browser.get(url)
+    text = browser.page_source
 
     # Parse with BeautifulSoup
     soup = BeautifulSoup(text, 'html.parser')
-    driver.close()
+    # driver.close()
     return soup
 
 
-def get_titles():
+def get_article_urls(site=None):
+    if site is None:
+        site = cnn
+
+    if isinstance(site, BeautifulSoup):
+        soup = site
+    else:
+        # Get BeautifulSoup object for the site
+        soup = get_soup(site)
+
+    articles = soup.find_all("article", "cd--article")
+    return [site + a.get("data-vr-contentbox") for a in articles]
+
+
+def get_articles(urls=None):
+    if urls is None:
+        urls = get_article_urls(cnn)
+
+    articles = []
+    for url in urls:
+        print(url)
+        article = get_soup(url)
+
+        meta = article.find_all("meta")
+        print("metas: ", len(meta))
+
+        # Init
+        topic = ""
+        title = ""
+        story = ""
+
+        for m in meta:
+            if m.get("property") == "og:title":
+                title = m.get("content")
+                continue
+
+            if m.get("name") == "section":
+                topic = m.get("content")
+                continue
+
+            if len(topic) and len(title):
+                pass # break
+
+        paragraphs = article.find_all("div", "zn-body__paragraph")
+        story = " ".join([p.text for p in paragraphs])
+
+        articles.append((topic, title, story))
+
+    return articles
+
+
+def get_titles_r0():
     soup = get_soup(cnn)
 
     articles = soup.find_all("article", "cd--article")
@@ -40,7 +108,7 @@ def get_titles():
         topic = article.get("data-section-name")
 
         print(a, ": title: ", title)
-        print(a, ": topic: ", topic)
+        print(a, ": topic: ", topic, "\n")
 
         file = "title-{}.txt".format(str(a))
         with codecs.open(folder.joinpath(file), "w", encoding="UTF-8") as f:
@@ -63,7 +131,7 @@ def read_title(n):
 def get_story(title):
     # Search just the first 5 words...
     html_title = urllib.parse.quote(" ".join(title.split()[:5]))
-    url = "https://www.cnn.com/search/?size=1&q={}".format(html_title)
+    url = site + "/search/?size=1&q={}".format(html_title)
 
     soup = get_soup(url)
     story = soup.find("div", "cnn-search__result-body")
@@ -71,18 +139,41 @@ def get_story(title):
         return story.text.strip()
 
 
-def run():
-    if not folder.joinpath("title-10.txt").exists():
-        get_titles()
+def write_articles(urls=None):
+    if urls is None:
+        urls = get_article_urls(site)
+    if isinstance(urls, str):
+        urls = [urls]
 
-    titles = folder.glob("title-*.txt")
+    # Tuple indices for each Article
+    topic = 0
+    title = 1
+    story = 2
 
-    for file in titles:
-        article = "article" + file.name[5:]
-        with open(file, "r", encoding="UTF-8") as f:
-            title = f.read()
-            story = get_story(title)
+    for i, url in enumerate(urls):
+        print(i, url)
+        article = get_articles([url])[0]
 
-        if isinstance(story, str):
-            with open(folder.joinpath(article), "w", encoding="UTF-8") as f:
-                f.write(story)
+        print("{}: {} / {}".format(i, article[topic], article[title]))
+        print("{}: story:\n{}".format(i, article[story]))
+
+        # Write topic
+        file = "topic-{}.txt".format(i)
+        with open(folder.joinpath(file), "w", encoding="UTF-8") as f:
+            f.write(article[topic])
+
+        file = "title-{}.txt".format(i)
+        with open(folder.joinpath(file), "w", encoding="UTF-8") as f:
+            f.write(article[title])
+
+        file = "article-{}.txt".format(i)
+        with open(folder.joinpath(file), "w", encoding="UTF-8") as f:
+            f.write(article[story])
+
+        print("{}: saved.\n".format(i))
+
+    # Done with browser
+    if False:
+        global browser
+        browser.close()
+        browser = None
