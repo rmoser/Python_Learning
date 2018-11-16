@@ -177,3 +177,15 @@ def write_articles(urls=None):
         global browser
         browser.close()
         browser = None
+
+def read_articles(n=None):
+    if not n is None:
+        file = folder.joinpath("title-{}.txt".format(n))
+        if not file.exists():
+            raise FileNotFoundError("Unable to locate {}/title-{}.txt".format(folder, n))
+        files = [file]
+    else:
+        files = folder.glob("title-*.txt")
+
+    for file in files:
+        pass
