@@ -27,7 +27,8 @@ rm(list = ls())
 set.seed(1)
 
 # Set Directory
-setwd("/Users/VC/Dropbox/MITReg/CASES/case5")
+setwd("F:/Users/Bob/Documents/Git/Python_Learning/MIT Data Science/Case Study 2.5 Gun Ownership")
+
 
 # Load Functions from External Files.
 source("Cond-comp.R")  
