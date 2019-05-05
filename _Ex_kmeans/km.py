@@ -32,6 +32,7 @@ def make_data(rows=1000, k=3):
 def errfunc(df, m):
     return np.sum(np.square((df.x - m[df.m, 0], df.y - m[df.m, 1])))
 
+
 def km(df, k=3, iters=100):
     np.random.seed()
     means = []
@@ -68,20 +69,61 @@ def km(df, k=3, iters=100):
 
     return err, means, dft
 
+def kmedioids(df, k=3, iters=100):
+    np.random.seed()
+    meds = []
+#    means.append(df[['x', 'y']][:k].values)  # Use first 3 points as centers
+    meds.append(df[['x', 'y']].sample(k).values)  # Use random k points as centers
+    errs = []
+    err = errfunc(df, meds[0])
+    errs.append(err)
+
+    for itr in range(iters):
+
+        dft = df[['x', 'y', 'm']].copy()
+        ms = meds[itr]  # k * 2 matrix
+        # print(ms)
+        dx = df.x.values.reshape(len(df.x), 1)
+        dy = df.y.values.reshape(len(df.y), 1)  # Convert to vertical matrix
+
+        ds = np.sum(np.square((dx - ms[:, 0], dy - ms[:, 1])), axis=0)
+        dft.m = [np.argsort(m)[0] for m in ds]
+
+        for i in range(k):
+            ms[i, 0] = np.median(dft.x[dft.m == i])
+            ms[i, 1] = np.median(dft.y[dft.m == i])
+
+        meds.append(ms)
+
+        err = errfunc(dft, ms)
+        errs.append(err)
+
+        # print(f"iter {itr+1}: err {err}")
+
+        if abs(err - errs[itr]) < 0.001:
+            break
+
+    return err, meds, dft
+
+
 def plotit(df):
     ks = df.m.unique()
     for k in ks:
         dfs = df[df.m == k]
         plt.scatter(dfs.x, dfs.y)
-        plt.scatter(np.mean(dfs.x), np.mean(dfs.y))
+        plt.scatter(np.median(dfs.x), np.median(dfs.y))
 
     plt.show()
 
+
 if True:
-    df = make_data(10000, 5)
+    # f = km
+    f = kmedioids
+    k = 8
+    df = make_data(10000, k)
     runs = {}
     for i in range(10):
-        run = km(df, 5)
+        run = f(df, k)
         err = run[0]
         runs[err] = run
         print(f"iter {i}: err {err}")
