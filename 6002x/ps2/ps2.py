@@ -255,7 +255,7 @@ class StandardRobot(Robot):
 
 # === Problem 4
 def runSimulation(num_robots, speed, width, height, min_coverage, num_trials,
-                  robot_type):
+                  robot_type, visualize=False):
     """
     Runs NUM_TRIALS trials of the simulation and returns the mean number of
     time-steps needed to clean the fraction MIN_COVERAGE of the room.
@@ -277,6 +277,8 @@ def runSimulation(num_robots, speed, width, height, min_coverage, num_trials,
     results = []
 
     for t in range(num_trials):
+        if visualize:
+            anim=ps2_visualize.RobotVisualization(num_robots, width, height, delay=0.01)
         room = RectangularRoom(width, height)
         robots = [robot_type(room, speed) for i in range(num_robots)]
         steps = 0
@@ -284,11 +286,15 @@ def runSimulation(num_robots, speed, width, height, min_coverage, num_trials,
             for r in robots:
                 r.updatePositionAndClean()
             steps += 1
+            if visualize:
+                anim.update(room, robots)
         results.append(steps)
+        if visualize:
+            anim.done()
     return sum(results) / len(results)
 
 # Uncomment this line to see how much your simulation takes on average
-print(runSimulation(1, 1.0, 20, 20, 1, 30, StandardRobot))
+# print(runSimulation(1, 1.0, 20, 20, 0.5, 1, StandardRobot, True))
 
 
 # === Problem 5
@@ -304,8 +310,14 @@ class RandomWalkRobot(Robot):
         Move the robot to a new position and mark the tile it is on as having
         been cleaned.
         """
-        raise NotImplementedError
+        nextPos = self.getRobotPosition().getNewPosition(self.getRobotDirection(), self.speed)
+        if self.room.isPositionInRoom(nextPos):
+            self.setRobotPosition(nextPos)
+            self.room.cleanTileAtPosition(nextPos)
 
+        self.setRobotRandomDirection()
+
+# print(runSimulation(1, 1.0, 20, 20, 0.5, 1, RandomWalkRobot, True))
 
 def showPlot1(title, x_label, y_label):
     """
@@ -325,6 +337,7 @@ def showPlot1(title, x_label, y_label):
     pylab.xlabel(x_label)
     pylab.ylabel(y_label)
     pylab.show()
+
 
     
 def showPlot2(title, x_label, y_label):
