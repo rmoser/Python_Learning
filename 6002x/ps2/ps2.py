@@ -210,6 +210,12 @@ class Robot(object):
         """
         self.direction = direction
 
+    def setRobotRandomDirection(self):
+        """
+        Set a random direction for the robot
+        """
+        self.direction = random.randint(0, 359)
+
     def updatePositionAndClean(self):
         """
         Simulate the passage of a single time-step.
@@ -236,11 +242,15 @@ class StandardRobot(Robot):
         Move the robot to a new position and mark the tile it is on as having
         been cleaned.
         """
-        raise NotImplementedError
-
+        nextPos = self.getRobotPosition().getNewPosition(self.getRobotDirection(), self.speed)
+        if self.room.isPositionInRoom(nextPos):
+            self.setRobotPosition(nextPos)
+            self.room.cleanTileAtPosition(nextPos)
+        else:
+            self.setRobotRandomDirection()
 
 # Uncomment this line to see your implementation of StandardRobot in action!
-##testRobotMovement(StandardRobot, RectangularRoom)
+# testRobotMovement(StandardRobot, RectangularRoom)
 
 
 # === Problem 4
@@ -262,10 +272,23 @@ def runSimulation(num_robots, speed, width, height, min_coverage, num_trials,
     robot_type: class of robot to be instantiated (e.g. StandardRobot or
                 RandomWalkRobot)
     """
-    raise NotImplementedError
+
+    # random.seed(0)
+    results = []
+
+    for t in range(num_trials):
+        room = RectangularRoom(width, height)
+        robots = [robot_type(room, speed) for i in range(num_robots)]
+        steps = 0
+        while room.getNumCleanedTiles() / room.getNumTiles() < min_coverage:
+            for r in robots:
+                r.updatePositionAndClean()
+            steps += 1
+        results.append(steps)
+    return sum(results) / len(results)
 
 # Uncomment this line to see how much your simulation takes on average
-##print(runSimulation(1, 1.0, 10, 10, 0.75, 30, StandardRobot))
+print(runSimulation(1, 1.0, 20, 20, 1, 30, StandardRobot))
 
 
 # === Problem 5
