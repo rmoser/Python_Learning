@@ -443,7 +443,7 @@ class SeekerRobot(Robot):
 
 #print(runSimulation(1, 1.0, 20, 20, 0.5, 1, OrthogonalRobot, True))
 
-print(runSimulation(2, 1.0, 50, 50, 1, 1, SeekerRobot, True))
+#print(runSimulation(2, 1.0, 50, 50, 1, 1, SeekerRobot, True))
 
 def showPlot1(title, x_label, y_label):
     """
@@ -453,16 +453,19 @@ def showPlot1(title, x_label, y_label):
     times1 = []
     times2 = []
     times3 = []
+    times4 = []
     for num_robots in num_robot_range:
         print("Plotting", num_robots, "robots...")
         times1.append(runSimulation(num_robots, 1.0, 20, 20, 0.8, 20, StandardRobot))
         times2.append(runSimulation(num_robots, 1.0, 20, 20, 0.8, 20, RandomWalkRobot))
         times3.append(runSimulation(num_robots, 1.0, 20, 20, 0.8, 20, OrthogonalRobot))
+        times4.append(runSimulation(num_robots, 1.0, 20, 20, 0.8, 20, SeekerRobot))
     pylab.plot(num_robot_range, times1)
     pylab.plot(num_robot_range, times2)
     pylab.plot(num_robot_range, times3)
+    pylab.plot(num_robot_range, times4)
     pylab.title(title)
-    pylab.legend(('StandardRobot', 'RandomWalkRobot', 'OrthogonalRobot'))
+    pylab.legend(('StandardRobot', 'RandomWalkRobot', 'OrthogonalRobot', 'SeekerRobot'))
     pylab.xlabel(x_label)
     pylab.ylabel(y_label)
     pylab.show()
@@ -476,16 +479,19 @@ def showPlot2(title, x_label, y_label):
     aspect_ratios = []
     times1 = []
     times2 = []
+    times3 = []
     for width in [10, 20, 25, 50]:
         height = 300//width
         print("Plotting cleaning time for a room of width:", width, "by height:", height)
         aspect_ratios.append(float(width) / height)
         times1.append(runSimulation(2, 1.0, width, height, 0.8, 200, StandardRobot))
         times2.append(runSimulation(2, 1.0, width, height, 0.8, 200, RandomWalkRobot))
+        times3.append(runSimulation(2, 1.0, width, height, 0.8, 200, SeekerRobot))
     pylab.plot(aspect_ratios, times1)
     pylab.plot(aspect_ratios, times2)
+    pylab.plot(aspect_ratios, times3)
     pylab.title(title)
-    pylab.legend(('StandardRobot', 'RandomWalkRobot'))
+    pylab.legend(('StandardRobot', 'RandomWalkRobot', 'SeekerRobot'))
     pylab.xlabel(x_label)
     pylab.ylabel(y_label)
     pylab.show()
@@ -505,5 +511,4 @@ def showPlot2(title, x_label, y_label):
 # 2) Write a function call to showPlot2 that generates an appropriately-labeled
 #     plot.
 #
-#       (... your call here ...)
-#
+#showPlot2("Cleaning Time vs Aspect Ratio", "Aspect Ratio", "Time")
