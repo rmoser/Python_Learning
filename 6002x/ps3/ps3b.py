@@ -157,9 +157,10 @@ class Patient(object):
         """
 
         self.viruses = [virus for virus in self.getViruses() if not virus.doesClear()]
-        for virus in self.getViruses():
+        popDensity = self.getTotalPop() / self.getMaxPop()
+        for virus in self.getViruses().copy():
             try:
-                new_virus = virus.reproduce(self.getTotalPop() / self.getMaxPop())
+                new_virus = virus.reproduce(popDensity)
                 self.viruses.append(new_virus)
             except NoChildException:
                 pass
@@ -357,7 +358,9 @@ class TreatedPatient(Patient):
         maxPop: The  maximum virus population for this patient (an integer)
         """
 
-        # TODO
+        Patient.__init__(self, viruses, maxPop)
+        self.prescriptions = list()
+
 
 
     def addPrescription(self, newDrug):
@@ -371,7 +374,8 @@ class TreatedPatient(Patient):
         postcondition: The list of drugs being administered to a patient is updated
         """
 
-        # TODO
+        if not newDrug in self.getPrescriptions():
+            self.prescriptions.append(newDrug)
 
 
     def getPrescriptions(self):
@@ -382,7 +386,7 @@ class TreatedPatient(Patient):
         patient.
         """
 
-        # TODO
+        return self.prescriptions
 
 
     def getResistPop(self, drugResist):
@@ -397,7 +401,11 @@ class TreatedPatient(Patient):
         drugs in the drugResist list.
         """
 
-        # TODO
+        n = 0
+        for virus in self.getViruses():
+            if all([virus.isResistantTo(drug) for drug in drugResist]):
+                n += 1
+        return n
 
 
     def update(self):
@@ -421,8 +429,16 @@ class TreatedPatient(Patient):
         integer)
         """
 
-        # TODO
+        self.viruses = [virus for virus in self.getViruses() if not virus.doesClear()]
+        popDensity = self.getTotalPop() / self.getMaxPop()
+        for virus in self.getViruses().copy():
+            try:
+                new_virus = virus.reproduce(popDensity, self.getPrescriptions())
+                self.viruses.append(new_virus)
+            except NoChildException:
+                pass
 
+        return self.getTotalPop()
 
 
 #
