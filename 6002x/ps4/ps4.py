@@ -47,7 +47,7 @@ class Climate(object):
         """
         self.rawdata = {}
 
-        f = open(filename, 'r')
+        f = open(r"ps4\\" + filename, 'r')
         header = f.readline().strip().split(',')
         for line in f:
             items = line.strip().split(',')
@@ -117,6 +117,7 @@ class Climate(object):
 End helper code
 """
 
+
 # Problem 1
 def generate_models(x, y, degs):
     """
@@ -130,6 +131,10 @@ def generate_models(x, y, degs):
         a list of numpy arrays, where each array is a 1-d array of coefficients
         that minimizes the squared error of the fitting polynomial
     """
+    models = []
+    for deg in degs:
+        models.append(np.polyfit(x, y, deg))
+    return models
 
 
 # Problem 2
@@ -142,8 +147,11 @@ def r_squared(y, estimated):
     Returns:
         a float for the R-squared error term
     """
-    # TODO
-    pass
+    y_vals = np.array(y, dtype=np.float)
+    e_vals = np.array(estimated, dtype=np.float)
+    y_mean = y_vals.mean()
+    return 1.0 - np.sum(np.square(y_vals - e_vals)) / np.sum(np.square(y_vals - y_mean))
+
 
 # Problem 3
 def evaluate_models_on_training(x, y, models):
