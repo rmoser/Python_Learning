@@ -1,6 +1,7 @@
 import numpy as np
 import pylab
 import re
+import os
 
 # cities in our weather data
 CITIES = [
@@ -47,7 +48,7 @@ class Climate(object):
         """
         self.rawdata = {}
 
-        f = open(r"ps4\\" + filename, 'r')
+        f = open(filename, 'r')
         header = f.readline().strip().split(',')
         for line in f:
             items = line.strip().split(',')
@@ -175,12 +176,21 @@ def evaluate_models_on_training(x, y, models):
     Returns:
         None
     """
-    # TODO
-    pass
 
+    for i, m in enumerate(models):
+        e = pylab.polyval(m, x)
+        rsq = r_squared(y, e)
+        pylab.figure(i)
+        pylab.plot(x, y, 'bo', linestyle='none', marker='o')
+        pylab.plot(x, e, color='red', linestyle='solid')
+        pylab.title("Order " + str(len(m) - 1) + " fit of Temp vs Time\nRsq: " + str(round(rsq, 3)))
+        pylab.xlabel("Time")
+        pylab.ylabel("Temp")
 
 ### Begining of program
+
 raw_data = Climate('data.csv')
+#raw_data = Climate(r'.\ps4\data.csv')
 
 # Problem 3
 y = []
