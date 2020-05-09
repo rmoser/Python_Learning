@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.cm
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import copy
@@ -264,7 +265,7 @@ class Wafer(object):
             return
         raise IndexError(f"Incorrect array length: {len(value)} != {len(self.die)}")
 
-    def plot(self):
+    def plot(self, z="is_bad"):
         if not self._die:
             raise KeyError(f"Wafer {self._l} {self._w} Die not defined.")
 
@@ -283,6 +284,10 @@ class Wafer(object):
         x_size_mm = die.x_size * 10
         y_size_mm = die.y_size * 10
 
+        if z == 'param':
+            z_min = np.min(self.die_param_vector())
+            z_max = np.max(self.die_param_vector())
+
         for y in self.y_range:
             for x in self.x_range:
                 die = self._die.get((x, y), None)
@@ -294,14 +299,21 @@ class Wafer(object):
                     fill = False
                 elif 0 == x == y:
                     color = 'blue'
-                    fill = die.is_bad
+                    fill = die.__getattribute__(z)
                 else:
                     color = 'black'
-                    fill = die.is_bad
+                    fill = die.__getattribute__(z)
 
-                ax.add_patch(patches.Rectangle(xy=(x_corner, y_corner), width=x_size_mm * .98, height=y_size_mm * .98,
-                                               edgecolor=color, Fill=fill
-                                               ))
+                if fill is not False and z == 'param':
+                    # print(x, y, fill)
+                    z_color = matplotlib.cm.jet(100 * (fill - z_min) / (z_max - z_min))
+                    ax.add_patch(patches.Rectangle(xy=(x_corner, y_corner),
+                                                   width=x_size_mm * .98, height=y_size_mm * .98,
+                                                   edgecolor=color, Fill=True, facecolor=z_color))
+                else:
+                    ax.add_patch(patches.Rectangle(xy=(x_corner, y_corner),
+                                                   width=x_size_mm * .98, height=y_size_mm * .98,
+                                                   edgecolor=color, Fill=fill))
 
         return fig
 
