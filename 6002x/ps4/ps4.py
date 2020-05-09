@@ -205,6 +205,8 @@ evaluate_models_on_training(x, y, models)
 x1 = INTERVAL_1
 x2 = INTERVAL_2
 y = []
-# MISSING LINES
-models = generate_models(x, y, [1])    
-evaluate_models_on_training(x, y, models)
+for year in x1:
+    y.append(np.mean(raw_data.get_yearly_temp('BOSTON', year)))
+y = np.array(y)
+models = generate_models(x1, y, [1])
+evaluate_models_on_training(x1, y, models)
