@@ -309,7 +309,9 @@ class Wafer(object):
                     z_color = matplotlib.cm.jet(100 * (fill - z_min) / (z_max - z_min))
                     ax.add_patch(patches.Rectangle(xy=(x_corner, y_corner),
                                                    width=x_size_mm * .98, height=y_size_mm * .98,
-                                                   edgecolor=color, Fill=True, facecolor=z_color))
+                                                   edgecolor=color, Fill=True, facecolor=z_color
+                                                   ))
+                    plt.title(f"z: [{z_min},{z_max}]")
                 else:
                     ax.add_patch(patches.Rectangle(xy=(x_corner, y_corner),
                                                    width=x_size_mm * .98, height=y_size_mm * .98,
