@@ -116,7 +116,7 @@ def plotit(df):
     plt.show()
 
 
-if True:
+if __name__ == '__main__':
     # f = km
     f = kmedioids
     k = 8
