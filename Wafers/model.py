@@ -11,9 +11,12 @@ def test():
     # fig = w.plot()
     return w
 
-def run0():
+def run(lot=None):
+    if lot is None:
+        raise ValueError("Pass a Lot object containing Wafers for analysis.")
+
     lot = Wafers.Lot("ALL")
-    for wafer in batch0():
+    for wafer in lot():
         lot.add_wafer(wafer)
     data = lot.die_isbad_vector()
     means = data.mean(axis=0)  # Mean for each position
@@ -73,41 +76,48 @@ def run0():
     # Y = X / np.sqrt(eigvals)
     # C = np.array([y.reshape((300, 300)) for y in Y.T])
 
-    return lot, data, A
+    return lot, data, X, evals, evecs
 
 
-def batch0(shape=(2, 3)):
-    wafers = []
-    for i in range(100):
-        w = Wafers.Wafer("ALL", i)
-        wafers.append(w)
+def gfa(shape=(2, 3), defect=None):
+    if defect is None:
+        defect = defect_q3
+
+    if not callable(defect):
+        raise ValueError("defect function required.")
+
+    lot = Wafers.Lot("ALL")
+    for i in range(20):
+        w = Wafers.Wafer("", i)
+        lot.add_wafer(w)
         w.generate_array_map(*shape)
-        if i >= 80:
-            defect_q3(w)
-    return wafers
+        if i >= 10:
+            defect(w)
+    return lot
 
 
 def defect_q3(wafer, bin=8):
-    if not wafer._die:
+    if not len(wafer):
         raise ValueError
-    for die in wafer._die.values():
+    for die in wafer:
         if die.x <= 0 and die.y <= 0:
             die.bin = bin
 
 
 def defect_top_edge(wafer, bin=8):
-    if not wafer._die:
+    if not wafer:
         raise ValueError
 
-    for die in wafer._die.values():
+    for die in wafer:
         if die.y == wafer.y_max:
             die.bin = bin
 
 
 def defect_xy(wafer, bin=8, xy=(1, 1)):
-    if not wafer._die:
-        raise ValueError
-    wafer._die[xy].bin = bin
+    if not xy in wafer:
+        raise ValueError(f"Coord {xy} not in Wafer {wafer}")
+    if xy in wafer:
+        wafer[xy].bin = bin
 
 
 
@@ -120,9 +130,10 @@ def PCA(data, dims_rescaled_data=2):
     from scipy import linalg as la
     m, n = data.shape
     # mean center the data
-    # data -= data.mean(axis=0)
+    means = data.mean(axis=0)
+    ndata = data - means
     # calculate the covariance matrix
-    R = np.cov(data, rowvar=False)
+    R = np.cov(ndata, rowvar=False)
     # calculate eigenvectors & eigenvalues of the covariance matrix
     # use 'eigh' rather than 'eig' since R is symmetric,
     # the performance gain is substantial
@@ -137,7 +148,9 @@ def PCA(data, dims_rescaled_data=2):
     evecs = evecs[:, :dims_rescaled_data]
     # carry out the transformation on the data using eigenvectors
     # and return the re-scaled data, eigenvalues, and eigenvectors
-    return np.dot(evecs.T, data.T).T, evals, evecs
+    X = np.dot(evecs.T, data.T).T
+    rec_data = evecs.T * X + means
+    return X, evals, evecs, rec_data
 
 
 def test_PCA(data, dims_rescaled_data=2):
@@ -146,6 +159,7 @@ def test_PCA(data, dims_rescaled_data=2):
     the eigenvectors of its covariance matrix & comparing that
     'recovered' array with the original data
     '''
+    m, n = data.shape
     _, _, eigenvectors = PCA(data, dim_rescaled_data=2)
     data_recovered = np.dot(eigenvectors, m).T
     data_recovered += data_recovered.mean(axis=0)
@@ -162,9 +176,11 @@ def plot_pca(data):
     MPL.show()
 
 
-
 if __name__ == "__main__":
-    test()
-    plt.ioff()
-    plt.show()
-    #plt.savefig(r"c:\temp\d.png")
+    # test()
+    # plt.ioff()
+    # plt.show()
+    # plt.savefig(r"c:\temp\d.png")
+
+    lot = gfa()
+    lot[0].plot()

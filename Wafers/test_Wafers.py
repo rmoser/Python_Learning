@@ -83,6 +83,49 @@ def test_typeddict_4():
     assert list(d.items()) == [(1, '1'), (2, '2')]
 
 
+def test_wafer_clear():
+    x = Wafers.Wafer()
+    assert len(x) == 0
+    x.__setitem__((0, 0), Wafers.Die(None, 0, 0, 1., 1.))
+    assert len(x) == 1
+    x.clear()
+    assert len(x) == 0
+
+
+def test_lot_clear():
+    x = Wafers.Lot()
+    assert len(x) == 0
+    x.add_wafer(Wafers.Wafer())
+    assert len(x) == 1
+    x.clear()
+    assert len(x) == 0
+
+
+def test_wafer_no_dupes():
+    x = Wafers.Wafer()
+    assert len(x) == 0
+    o = Wafers.Die(None, 0, 0, 1., 1.)
+    x.__setitem__((0, 0), o)
+    assert len(x) == 1
+    x.__setitem__((0, 0), o)
+    assert len(x) == 1
+    o = Wafers.Die(None, 1, 1, 1., 1.)
+    x.__setitem__((0, 0), o)
+    assert len(x) == 1
+    x.clear()
+    assert len(x) == 0
+
+
+def test_lot_no_dupes():
+    x = Wafers.Lot()
+    assert len(x) == 0
+    o = Wafers.Wafer()
+    x.add_wafer(o)
+    assert len(x) == 1
+    x.add_wafer(o)
+    assert len(x) == 1, "Should recognize same wafer id and replace"
+
+
 def test_wafer_0():
     w = Wafers.Wafer('', 0)
     assert isinstance(w, Wafers.Wafer)
@@ -97,7 +140,7 @@ def test_wafer_0():
 
     assert w.radius > 0.
     assert w.edge_exclusion >= 0.
-    assert not w.die
+    assert not len(w)
 
 
 # Validate only one die per wafer for max rectangles with several aspect ratios
@@ -144,14 +187,14 @@ def test_wafer_deepcopy_0():
     w1.generate_array_map(10, 10)
 
     # All bad die
-    for d in w1.die.values(): d.bin = 8
+    for d in w1: d.bin = 8
 
     die_count = w1.die_count  # Store die count
 
     w2 = w1.__deepcopy__()  # Copy w1 & validate data
     assert w2.die_count == die_count
     assert w2.radius == 100
-    for d in w2.die.values(): assert d.bin == 8
+    for d in w2: assert d.bin == 8
 
     w1.generate_array_map(5, 5)  # Remap w1, die count changes
     w1.radius = 10
@@ -165,9 +208,21 @@ def test_wafer_deepcopy_0():
     assert w2.radius == 100
 
     # w1 all good bins, w2 all bad bins
-    for d in w1.die.values(): assert d.bin == 1
-    for d in w2.die.values(): assert d.bin == 8
+    for d in w1: assert d.bin == 1
+    for d in w2: assert d.bin == 8
 
+
+def test_wafer_params_init():
+    w = Wafers.Wafer()
+    w.radius = 15
+    w.generate_array_map(1, 1)
+    assert len(w) > 0, 'Should fit 2 die'
+
+    len_was = len(w)
+
+    w.radius = 12
+    w.generate_array_map(1, 1)
+    assert len_was > len(w)
 
 def test_wafer_params_0():
     # Updating params with list of same length
@@ -193,6 +248,8 @@ def test_wafer_params_0():
         assert a == b, "Wafer class did not update param data correctly"
 
     try:
+        print(values[1:])
+        print(w.die_param_vector())
         w.set_param_vector(values[1:])
     except IndexError:
         pass
@@ -207,21 +264,21 @@ def test_wafer_params_1():
 
     num = len(w)
 
-    dice = copy.deepcopy(w.die)
-    dice._type = np.float  # Break the TypedDict, but we will fix it...
-    for key in dice.keys():
-        dice[key] = np.float(np.random.uniform())
+    wc = copy.deepcopy(w)
+    wc._type = np.float  # Break the TypedDict, but we will fix it...
+    for key in wc.keys():
+        wc[key] = np.float(np.random.uniform())
 
     # dice is now a TypedDict with random float values
 
     try:
-        w.set_param_vector(dice)
+        w.set_param_vector(wc)
     except:
         assert False, "Wafer class set_param_vector() broke"
     else:
         pass
 
-    for a, b in zip(w.die_param_vector(), dice):
+    for a, b in zip(w.die_param_vector(), wc):
         assert a == b, "Wafer class did not update param data correctly"
 
 

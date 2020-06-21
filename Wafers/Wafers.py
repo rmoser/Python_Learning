@@ -1,15 +1,23 @@
 import numpy as np
+import matplotlib
 import matplotlib.cm
-import matplotlib.pyplot as plt
+import matplotlib.figure
 import matplotlib.patches as patches
+import matplotlib.pyplot as plt
 import copy
 import collections
+import plotly
+import plotly.subplots
+import plotly.graph_objs as go
+
+# PLOT_ENGINE = plt
+PLOT_ENGINE = plotly
 
 
 class TypedDict(collections.UserDict):
     def __init__(self, dict=None, required_type=None, **kwargs):
         super().__init__(None, **kwargs)
-        self.data = {}
+        self.data = {}  # Clear dict
 
         # Contains objects of a single type
         if isinstance(required_type, type):
@@ -56,75 +64,184 @@ class TypedDict(collections.UserDict):
     def items(self):
         return self.data.items()  # Base class relies on __iter__ for items
 
+    def clear(self):
+        super().clear()
 
-class Lot(object):
-    def __init__(self, lot):
-        self._l = str(lot).upper()
-        self._wafers = TypedDict(required_type=Wafer)
+
+class Lot(TypedDict):
+    def __init__(self, name="", dict=None, **kwargs):
+        super().__init__(dict=dict, required_type=Wafer)
+        self._l = str(name).upper()
 
     def __len__(self):
-        return len(self._wafers)
-
-    @property
-    def l(self):
-        return self._l
+        return len(self.data)
 
     @property
     def name(self):
         return self._l
 
-    @l.setter
-    def l(self, value):
+    @name.setter
+    def name(self, value):
         self._l = str(value).upper()
 
     @property
-    def wafers(self):
-        return self._wafers
+    def l(self):
+        return self.name
 
-    @wafers.setter
-    def wafers(self, value):
-        self._wafers = value
+    @l.setter
+    def l(self, value):
+        self.name = value
+
+    # @property
+    # def wafers(self):
+    #     return super().data
+    #
+    # @wafers.setter
+    # def wafers(self, value):
+    #     self.data = value
 
     @property
     def wafer_ids(self):
-        if not self._wafers: return None
-        return self._wafers.keys()
+        if not self: return None
+        return super().keys()
 
     @property
     def die_count(self):
-        if not self.wafers: return 0
-        return sum(w.die_count for w in self.wafers)
+        if not len(self): return 0
+        return sum(w.die_count for w in self)
 
     def add_wafer(self, wafer):
-        if wafer not in self.wafers:
-            self.wafers[wafer._w] = wafer
+        if wafer not in self:
+            self[wafer.w] = wafer
             wafer.lot = self
-            wafer.l = self.l
+            # wafer.l = self.l
 
     def die_isbad_vector(self, bin=0):
-        return np.array([wafer.die_isbad_vector(bin) for wafer in self.wafers], dtype=np.bool)
+        return np.array([wafer.die_isbad_vector(bin) for wafer in self.values()], dtype=np.bool)
 
     def die_bin_vector(self):
-        return np.array([wafer.die_bin_vector() for wafer in self.wafers], dtype=np.int)
+        return np.array([wafer.die_bin_vector() for wafer in self.values()], dtype=np.int)
 
     def die_param_vector(self):
-        return np.array([wafer.die_param_vector() for wafer in self.wafers])
+        return np.array([wafer.die_param_vector() for wafer in self.values()])
+
+    def clear(self):
+        self.data.clear()
+
+    def _calc_grid(self, n=0):
+        if not n or n <= 0:
+            n = len(self)
+
+        # Defines desired aspect ratio for grid
+        _x = 16
+        _y = 9
+
+        v = (n / _x * _y) ** 0.5
+        y = int(round(v, 0))
+        x = int(n / y)
+        while n > y * x:
+            x += 1
+        # print(f"n: {n}  v: {v}  xy: {x} {y}")
+        return x, y
+
+    def plot(self, z='is_bad'):
+        global PLOT_ENGINE
+        if PLOT_ENGINE is plt: return self.plot_pyplot(z=z)
+        if PLOT_ENGINE is plotly: return self.plot_plotly(z=z)
+        raise ValueError(f"Plot engine not recognized: {PLOT_ENGINE}")
+
+    def plot_pyplot(self, z='is_bad'):
+        if not len(self):
+            raise IndexError(f"Wafer {self._l} Wafers not defined.")
+
+        x, y = self._calc_grid()
+
+        # if not isinstance(ax, matplotlib.axes.Axes):
+        #     raise TypeError(f"Argument 'ax' must be matplotlib Axes: {ax}")
+
+        fig = plt.figure(figsize=(12, 6))
+        fig.suptitle(f"Lot: {self.l}", fontsize=16)
+        fig.subplots(y, x)
+        for ax in fig.axes:
+            ax.set_aspect(1., adjustable='box')
+            ax.set_xticks([], [])
+            ax.set_yticks([], [])
+
+        #plt.axis('off')
+
+        for i, w in enumerate(self):
+            ax = fig.axes[i]
+            ax.set_xlabel(f"Wafer {w.w}")
+            w.plot(ax=ax)
+
+        plt.draw_all()
+        plt.tight_layout()
+        # fig.canvas.draw()
+        # fig.canvas.flush_events()
+        return fig
+
+    def plot_plotly(self, z='is_bad'):
+        if not len(self):
+            raise IndexError(f"Wafer {self._l} Wafers not defined.")
+
+        x, y = self._calc_grid()
+
+        # if not isinstance(ax, matplotlib.axes.Axes):
+        #     raise TypeError(f"Argument 'ax' must be matplotlib Axes: {ax}")
+
+        fig = plotly.subplots.make_subplots(rows=y, cols=x)
+
+        #fig = plt.figure(figsize=(12, 6))
+        fig.update_layout(dict(title=f"Lot: {self.l}", font=dict(size=16)))
+
+        print(x, y)
+        for i, wafer in enumerate(self.values()):
+            _x = i % x + 1
+            _y = i // x + 1
+
+            wafer.plot(ax=go.Scatter(), coord=(_y, _x))
+
+        return
+
+        for ax in fig.axes:
+            ax.set_aspect(1., adjustable='box')
+            ax.set_xticks([], [])
+            ax.set_yticks([], [])
+
+        #plt.axis('off')
+
+        for i, w in enumerate(self):
+            ax = fig.axes[i]
+            ax.set_xlabel(f"Wafer {w.w}")
+            w.plot(ax=ax)
+
+        plt.draw_all()
+        plt.tight_layout()
+        # fig.canvas.draw()
+        # fig.canvas.flush_events()
+        return fig
 
 
-class Wafer(object):
-    def __init__(self, lot: (Lot, str), wafer: int):
+
+class Wafer(TypedDict):
+    def __init__(self, lot: (Lot, str) = None, wafer: int = None):
+        super().__init__(dict=None, required_type=Die)
+
+        if lot is None:
+            lot = ""
+        if wafer is None:
+            wafer = np.random.randint(100, 999)
+
         if isinstance(lot, Lot):
             self._lot = lot
             self._l = lot.l
         else:
             self._lot = None
             self._l = str(lot).upper()
-
         self._w = int(wafer)
         self.radius = 150.
         self.edge_exclusion = 3.
         self.center = (0., 0.)
-        self._die = TypedDict(required_type=Die)
         self.x_range = None
         self.y_range = None
         self.y_min = None
@@ -135,11 +252,11 @@ class Wafer(object):
     def __str__(self):
         result = ""
         result += f"Wafer lw: {self._l} {self._w}\n"
-        result += f"  Total Dice: {self._die and len(self._die) or 0}\n"
+        result += f"  Total Dice: {len(self)}\n"
         result += f"  Usable/Total Diameter: {2 * (self.radius - self.edge_exclusion)} / {2 * self.radius}\n"
         result += f"  Center: {self.center}\n"
-        if self._die:
-            die = self._die[(0, 0)]
+        if len(self):
+            die = self[0, 0]
             result += f"  Die size: {die.x_size} x {die.y_size}: {die.area} cm\u00b2\n"
         if self.x_range:
             result += f"  x: {min(self.x_range)} : {max(self.x_range)} \n"
@@ -148,7 +265,7 @@ class Wafer(object):
         return result
 
     def __repr__(self):
-        if not self._die or not self.x_range or not self.y_range:
+        if not len(self) or not self.x_range or not self.y_range:
             return f"Undefined {int(2 * self.radius)}mm wafer, lw: {self._l} {self._w}"
 
         result = "\n"
@@ -156,12 +273,12 @@ class Wafer(object):
             chars = []
             for x in self.x_range:
                 char = ""
-                if (x, y) in self._die:
+                if (x, y) in self.keys():
                     if 0 == x == y:
                         char += '\x1b[96m'  # Cyan text
 
                     # Black rectangle for Good die, White rectangle for Bad die
-                    char += "\u25AF" if self._die[(x, y)].is_good else "\u25AE"
+                    char += "\u25AF" if self[x, y].is_good else "\u25AE"
 
                     if 0 == x == y:
                         char += '\x1b[0m'  # Default color
@@ -183,11 +300,17 @@ class Wafer(object):
         new_wafer.radius = self.radius
         new_wafer.edge_exclusion = self.edge_exclusion
         new_wafer.center = copy.deepcopy(self.center)
-        new_wafer.die = copy.deepcopy(self.die)
+        new_wafer.data = copy.deepcopy(self.data)
         return new_wafer
 
     def __len__(self):
-        return len(self._die)
+        return super().__len__()
+
+    def __iter__(self):
+        return super().__iter__()
+
+    # def __next__(self):
+    #     return super().__next__()
 
     @property
     def lot(self):
@@ -202,6 +325,7 @@ class Wafer(object):
 
     @property
     def l(self):
+        if self.lot: return self.lot.l
         return self._l
 
     @l.setter
@@ -220,58 +344,93 @@ class Wafer(object):
     def name(self):
         return self._w
 
-    @property
-    def die(self):
-        return self._die
+    # def __getitem__(self, item):
+    #     return super().__getitem__(item)
+    #
+    # def __setitem__(self, key, value):
+    #     super().__setitem__(key, value)
 
-    @die.setter
-    def die(self, die):
-        self._die = die
-        if die:
-            self.x_min = min(d.x for d in die.values())
-            self.x_max = max(d.x for d in die.values())
-            self.x_range = range(self.x_min, self.x_max + 1)
+    def clear(self):
+        self.data.clear()
 
-            self.y_min = min(d.y for d in die.values())
-            self.y_max = max(d.y for d in die.values())
-            self.y_range = range(self.y_max, self.y_min - 1, -1)  # Descending for easy maps in console
+    def update(self, *args, **kwargs):
+        super().update(*args, **kwargs)
+
+        self.x_min = min(d.x for d in self.values())
+        self.x_max = max(d.x for d in self.values())
+        self.x_range = range(self.x_min, self.x_max + 1)
+
+        self.y_min = min(d.y for d in self.values())
+        self.y_max = max(d.y for d in self.values())
+        self.y_range = range(self.y_max, self.y_min - 1, -1)  # Descending for easy maps in console
 
     @property
     def die_count(self):
-        if not self.die: return 0
-        return len(self.die)
+        return len(self)
 
     def die_isbad_vector(self, bin=0):
         if bin and bin > 0:  # Positive Integer
-            return np.array([die.bin == bin for die in self.die.values()], dtype=np.bool)
+            return np.array([die.bin == bin for die in self.values()], dtype=np.bool)
 
-        return np.array([die.is_bad for die in self.die.values()], dtype=np.bool)
+        return np.array([die.is_bad for die in self.values()], dtype=np.bool)
 
     def die_bin_vector(self):
-        return np.array([die.bin for die in self.die.values()], dtype=np.int)
+        return np.array([die.bin for die in self.values()], dtype=np.int)
 
     def die_param_vector(self):
-        return np.array([die.param for die in self.die.values()])
+        return np.array([die.param for die in self.values()])
 
     def set_param_vector(self, value):
         if isinstance(value, collections.Mapping):
-            for key, val in value.items():
-                self.die[key].param = val
-            return
-        if len(value) == len(self.die):
-            # Trust they are still in order
-            for val, die in zip(value, self.die):
+            # Dict-like container, then match keys
+            if set(super().keys()) == set(value.keys()):
+                #print("dict-like update")
+                for key in value.keys():
+                    self[key].param = value[key]
+                return
+        elif len(value) == super().__len__():
+            # print(f"arr-like update: {len(value)} == {super().__len__()}")
+            # Array-like.  Trust they are still in order
+            for die, val in zip(self.values(), value):
                 die.param = val
             return
-        raise IndexError(f"Incorrect array length: {len(value)} != {len(self.die)}")
+        raise IndexError(f"Incorrect array length: {len(value)} != {len(self)}")
 
-    def plot(self, z="is_bad"):
-        if not self._die:
+    def plot(self, z="is_bad", ax=None):
+        global PLOT_ENGINE
+        if PLOT_ENGINE is plt:
+            result = self.plot_pyplot(z=z, ax=ax)
+            if ax is None: plt.show()
+            return result
+
+        if PLOT_ENGINE is plotly:
+            result = self.plot_plotly(z=z, ax=ax)
+            if ax is None:
+                print(result)
+                plotly.offline.plot(result)
+            return result
+
+        raise ValueError(f"Plot engine not recognized: {PLOT_ENGINE}")
+
+    def plot_pyplot(self, z="is_bad", ax=None):
+        if not len(self):
             raise KeyError(f"Wafer {self._l} {self._w} Die not defined.")
 
-        fig = plt.figure(figsize=(6, 6))
-        fig.subplots(1, 1)
-        ax = fig.axes[0]
+        if ax is None:
+            fig = plt.figure(figsize=(6, 6))
+            fig.suptitle(f"Lot Wafer: {self.l} {self.w}", fontsize=16)
+            fig.subplots(1, 1)
+            ax = fig.axes[0]
+            plt.draw_all()
+            plt.tight_layout()
+            # ax.set_xticks([], [])
+            # ax.set_yticks([], [])
+            # plt.axis('off')
+            # plt.tick_params(axis='both', which='both', bottom='off', top='off', labelbottom='off', right='off', left='off',
+            #             labelleft='off')
+
+        if not isinstance(ax, matplotlib.axes.Axes):
+            raise TypeError(f"Argument 'ax' must be matplotlib Axes: {ax}")
 
         # Circles for edge of wafer and edge exclusion zone
         ax.add_patch(patches.Circle(xy=(0, 0), radius=self.radius))
@@ -279,10 +438,12 @@ class Wafer(object):
         ax.autoscale()  # Do now, since Circles define the outer edge
 
         show_empty = True
-        die = self._die[(0, 0)]
-        aspect_ratio = die.aspect_ratio
+        die = self[0, 0]
         x_size_mm = die.x_size * 10
         y_size_mm = die.y_size * 10
+
+        # Force square plots
+        ax.set_aspect(1., adjustable='box')
 
         if z == 'param':
             z_min = np.min(self.die_param_vector())
@@ -290,7 +451,7 @@ class Wafer(object):
 
         for y in self.y_range:
             for x in self.x_range:
-                die = self._die.get((x, y), None)
+                die = self.get((x, y), None)
                 x_corner = (x - self.center[0]) * x_size_mm - x_size_mm / 2
                 y_corner = (y - self.center[1]) * y_size_mm - y_size_mm / 2
 
@@ -305,6 +466,7 @@ class Wafer(object):
                     fill = die.__getattribute__(z)
 
                 if fill is not False and z == 'param':
+                    # Filled rectangles, color based on parameter value
                     # print(x, y, fill)
                     z_color = matplotlib.cm.jet(100 * (fill - z_min) / (z_max - z_min))
                     ax.add_patch(patches.Rectangle(xy=(x_corner, y_corner),
@@ -312,10 +474,128 @@ class Wafer(object):
                                                    edgecolor=color, Fill=True, facecolor=z_color
                                                    ))
                     plt.title(f"z: [{z_min},{z_max}]")
-                else:
+
+                elif die or show_empty:
+                    # Empty rectangles, color based on parameter value
                     ax.add_patch(patches.Rectangle(xy=(x_corner, y_corner),
                                                    width=x_size_mm * .98, height=y_size_mm * .98,
                                                    edgecolor=color, Fill=fill))
+
+        return ax
+
+    def plot_plotly(self, z="is_bad", ax=None, coord=None):
+        """
+            Wafer plot using plotly
+        """
+
+        # Color names reference:
+        # https://developer.mozilla.org/en-US/docs/Web/CSS/color_value
+
+        if not len(self):
+            raise KeyError(f"Wafer {self._l} {self._w} Die not defined.")
+
+        if ax is None or coord is None:
+            fig = go.Figure()
+
+            fig.update_layout(
+                title=f"Lot Wafer: {self.l} {self.w}",
+                font=dict(size=18)
+            )
+            # fig.update_layout(width=800, height=800)
+            ax = go.Scatter()
+            # fig.suptitle(f"Lot Wafer: {self.l} {self.w}", fontsize=16)
+            # fig.subplots(1, 1)
+            # ax = fig.axes[0]
+            # plt.draw_all()
+            # plt.tight_layout()
+
+            # ax.set_xticks([], [])
+            # ax.set_yticks([], [])
+            # plt.axis('off')
+            # plt.tick_params(axis='both', which='both', bottom='off', top='off', labelbottom='off', right='off', left='off',
+            #             labelleft='off')
+        else:
+            if not isinstance(ax, go.Scatter):
+                raise TypeError(f"Argument 'ax' must be Plotly Scatter: {ax}")
+
+            if not isinstance(coord, tuple) or len(coord) != 2:
+                raise TypeError(f"Argument 'coord' must be 2-tuple row, col: {coord}")
+
+            fig = ax
+
+        r = self.radius
+        fig.update_xaxes(range=[-r, r], zeroline=False)
+        fig.update_yaxes(range=[-r, r])
+
+        # Outer circle for full wafer
+        fig.add_shape(type='circle', fillcolor='RoyalBlue', line_width=0,
+                      x0=-r, y0=-r, x1=r, y1=r,
+        )
+
+        # Inner circle for edge exclusion
+        ree = self.radius - self.edge_exclusion
+        fig.add_shape(type='circle', fillcolor='Silver', line_width=0,
+                      x0=-ree, y0=-ree, x1=ree, y1=ree,
+         )
+
+        # scaleanchor='x' forces square plots
+        fig.update_layout(
+            xaxis=dict(showgrid=False, zeroline=False),
+            yaxis=dict(showgrid=False, zeroline=False, scaleanchor='x'),
+        )
+
+        show_empty = True
+        die = self[0, 0]
+        x_size_mm = die.x_size * 10
+        y_size_mm = die.y_size * 10
+
+        if z == 'param':
+            z_min = np.min(self.die_param_vector())
+            z_max = np.max(self.die_param_vector())
+
+        for y in self.y_range:
+            for x in self.x_range:
+                die = self.get((x, y), None)
+                x_corner = (x - self.center[0]) * x_size_mm - x_size_mm / 2
+                y_corner = (y - self.center[1]) * y_size_mm - y_size_mm / 2
+
+                if not die:
+                    color = 'Gray'
+                    fill = False
+                elif 0 == x == y:
+                    color = 'RoyalBlue'
+                    fill = die.__getattribute__(z)
+                else:
+                    color = 'Black'
+                    fill = die.__getattribute__(z)
+
+                if fill is not False and z == 'param':
+                    # Filled rectangles, color based on parameter value
+                    # print(x, y, fill)
+                    # z_color = matplotlib.cm.jet(100 * (fill - z_min) / (z_max - z_min))
+                    # ax.add_patch(patches.Rectangle(xy=(x_corner, y_corner),
+                    #                                width=x_size_mm * .98, height=y_size_mm * .98,
+                    #                                edgecolor=color, Fill=True, facecolor=z_color
+                    #                                ))
+                    # plt.title(f"z: [{z_min},{z_max}]")
+                    fig.add_shape(
+                        type='rect',
+                        x0=x_corner, y0=y_corner,
+                        x1=x_corner + x_size_mm * .98, y1=y_corner + y_size_mm * .98,
+                        line=dict(color=color),
+                    )
+
+                elif die or show_empty:
+                    # Empty rectangles, color based on parameter value
+                    # ax.add_patch(patches.Rectangle(xy=(x_corner, y_corner),
+                    #                                width=x_size_mm * .98, height=y_size_mm * .98,
+                    #                                edgecolor=color, Fill=fill))
+                    fig.add_shape(
+                        type='rect',
+                        x0=x_corner, y0=y_corner,
+                        x1=x_corner + x_size_mm * .98, y1=y_corner + y_size_mm * .98,
+                        line=dict(color=color),
+                    )
 
         return fig
 
@@ -343,7 +623,7 @@ class Wafer(object):
             y_max = int(center[1] + self.radius / y_size_mm + 1)
             # print(f"min/max x: {x_min}/{x_max}  y: {y_min}/{y_max}")
 
-            for y in np.arange(y_min, y_max + 1):
+            for y in range(y_min, y_max + 1):
                 for x in range(x_min, x_max + 1):
                     # print(f"xy: {x}, {y}")
                     x_center = (x - center[0]) * x_size_mm
@@ -355,10 +635,11 @@ class Wafer(object):
                     sw = (x_center - x_size_mm / 2, y_center - y_size_mm / 2)
 
                     if all([self.in_wafer(*coord) for coord in (nw, ne, sw, se)]):
-                        dice[(x, y)] = Die(self, x, y, x_size, y_size)
-                        # print(f"FIT: Center: {center} Corners: {nw} {ne} {se} {sw}")
+                        dice[x, y] = Die(wafer=self, x=x, y=y, x_size=x_size, y_size=y_size)
+                        #print(f"FIT: Center: {center} {x},{y} Corners: {nw} {ne} {se} {sw}")
+                        #print(len(dice))
                     else:
-                        # print(f"NO:  Center: {center} Corners: {nw} {ne} {se} {sw}")
+                        #print(f"NO:  Center: {center} {x},{y} Corners: {nw} {ne} {se} {sw}")
                         pass
 
             if len(dice) > len(wafer_map):
@@ -366,7 +647,9 @@ class Wafer(object):
                 zero_center = center
 
         if len(wafer_map):
-            self.die = wafer_map
+            self.clear()
+            # print(f"After clear should be zero: {len(self)}")
+            self.update(wafer_map.data)
             self.center = zero_center
         else:
             raise ValueError(f"Unable to generate array map for x/y (in cm): {x_size}, {y_size}")
@@ -374,6 +657,12 @@ class Wafer(object):
 
 class Die(object):
     def __init__(self, wafer: Wafer, x: int, y: int, x_size: float, y_size: float):
+        if isinstance(wafer, Wafer):
+            self._lot = wafer.lot
+            self._l = wafer.l
+        else:
+            self._lot = None
+            self._l = ''
         self._wafer = wafer
         self._x = int(x)
         self._y = int(y)
@@ -382,8 +671,12 @@ class Die(object):
         self._bin = 1
         self._param = 0.
 
-    def __repr__(self):
+    @property
+    def __name__(self):
         return f"Die: {self.l} {self.w} {self.x},{self.y}"
+
+    def __repr__(self):
+        return self.__name__
 
     def __copy__(self):
         new_die = Die(self.wafer, self.x, self.y, self.x_size, self.y_size)
@@ -400,11 +693,14 @@ class Die(object):
 
     @property
     def l(self):
-        return self._wafer._l
+        if self.lot: return self.lot.l
+        if self.wafer: return self.wafer.l
+        return self._l
 
     @property
     def w(self):
-        return self._wafer._w
+        if self.wafer: return self.wafer.w
+        return self._w
 
     @property
     def x(self):
@@ -413,6 +709,10 @@ class Die(object):
     @property
     def y(self):
         return self._y
+
+    @property
+    def coord(self):
+        return (self.x, self.y)
 
     @property
     def area(self):
@@ -448,3 +748,4 @@ class Die(object):
         if self.x_size == 0:
             raise ValueError(f"Invalid x_size: {self.x_size}")
         return self.y_size / self.x_size
+
