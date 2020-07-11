@@ -84,6 +84,23 @@ def dist(a, b):
     return sp.spatial.distance.euclidean(a.flatten(), b.flatten())
 
 
+def dists(i, arr):
+    """
+        Calculates distance of image (i) from an array of images (arr)
+        Returns array of floats with dimensions matching arr
+    """
+    return [dist(i, img) for img in arr]
+
+
+def nearest(i, arr):
+    """
+        Returns img from arr nearest (min distance from) target image i
+    """
+    d = np.asarray(dists(i, arr))
+    idx = np.argmin(d)
+    return arr[idx]
+
+
 def name():
     return sys._getframe().f_code.co_name
 
