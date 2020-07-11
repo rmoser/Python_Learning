@@ -13,16 +13,22 @@ def mosaic(img, images):
     x_small = x_size // 12
     y_small = y_size // 8
 
+    #print(f"x_small, y_small: {x_small}, {y_small}")
     n = len(images)
     _images = [_img.resize(size=(x_small, y_small)) for _img in images]
+    #print("img size: ", _images[0].size)
 
-    image_mosaic = np.empty(shape=(x_small * 12, y_small * 8, 3))
+    image_mosaic = np.zeros(shape=(y_small * 8, x_small * 12, 3), dtype=np.uint8)
 
     for x in range(12):
         for y in range(8):
-            small = np.array(img.crop((x * x_small, y * y_small, (x+1)*x_small-1, (y+1)*y_small-1)))
+            print(f"x,y: {x}, {y}")
+            small = img.crop((x * x_small, y * y_small, (x+1)*x_small, (y+1)*y_small))
+
             nearest = im_proc.nearest(small, _images)
-            image_mosaic[x * x_small:(x+1)*x_small-1, y * y_small:(y+1)*y_small-1] = nearest
+            image_mosaic[y * y_small:(y+1)*y_small, x * x_small:(x+1)*x_small] = np.asarray(nearest)
+
+            #PIL.Image.fromarray(image_mosaic).show()
 
     return PIL.Image.fromarray(image_mosaic)
 
