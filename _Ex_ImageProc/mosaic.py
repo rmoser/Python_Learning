@@ -7,22 +7,28 @@ import glob
 import numpy as np
 
 
-def mosaic(img, images):
+def mosaic(img, images, grid=None):
     (x_size, y_size) = img.size
 
-    x_small = x_size // 12
-    y_small = y_size // 8
+    if grid is None:
+        grid = (12, 8)
+
+    if not len(grid) == 2:
+        raise ValueError(f"grid must be a tuple of length 2: {grid}")
+
+    x_small = x_size // grid[0]
+    y_small = y_size // grid[1]
 
     #print(f"x_small, y_small: {x_small}, {y_small}")
     n = len(images)
     _images = [_img.resize(size=(x_small, y_small)) for _img in images]
     #print("img size: ", _images[0].size)
 
-    image_mosaic = np.zeros(shape=(y_small * 8, x_small * 12, 3), dtype=np.uint8)
+    image_mosaic = np.zeros(shape=(y_small * grid[1], x_small * grid[0], 3), dtype=np.uint8)
 
-    for x in range(12):
-        for y in range(8):
-            print(f"x,y: {x}, {y}")
+    for x in range(grid[0]):
+        for y in range(grid[1]):
+            #print(f"x,y: {x}, {y}")
             small = img.crop((x * x_small, y * y_small, (x+1)*x_small, (y+1)*y_small))
 
             nearest = im_proc.nearest(small, _images)
