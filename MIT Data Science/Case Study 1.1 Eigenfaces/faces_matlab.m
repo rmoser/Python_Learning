@@ -1,0 +1,304 @@
+% number of images on the training set.
+M = 14;
+% M = 1; % Just process one image for debugging
+% Size of square grid large enough for M images
+sqrtM = ceil(sqrt(M))
+%read and show images(jpg);
+
+% S will store all the images
+S=[];
+figure(1);
+for i=1:M
+ str = strcat('pics/instructors/', int2str(i));
+ str = strcat(str, '.jpg');
+ eval('img=imread(str);');
+ if ndims(img)==3
+    img = rgb2gray(img);
+ end
+ img = imresize(img, [300,300]);
+ subplot(sqrtM, sqrtM, i)
+ imshow(img)
+ if i==3
+    title('Course Intructors','fontsize',14)
+ end
+ drawnow;
+ % save the dimensions of the image (irow, icold)
+ [irow, icol]=size(img);
+ % creates a (N1*N2) x 1 matrix and add to S
+ temp=reshape(img',irow*icol,1);
+ %S will eventually be a (N1*N2) x M matrix.
+ S=[S temp];
+end
+
+
+%%
+% 
+% %Normalize.
+% Mean and StdDev of values for all images...
+% um = mean(mean(double(S)))
+% ustd = sqrt(sum(std(double(S)).^2))
+% 
+% for i=1:size(S,2)
+%  temp=double(S(:,i));
+%  m=mean(temp);
+%  st=std(temp);
+%  S(:,i)=(temp-m)*ustd/st+um;
+% end
+
+%%
+
+%save and show normalized images
+figure(2);
+for i=1:M
+ str=strcat(int2str(i),'.jpg');
+ img=reshape(S(:,i),icol,irow);
+ img=img';
+ eval('imwrite(img,str)');
+ subplot(sqrtM, sqrtM, i)
+ imshow(img)
+ drawnow;
+ if i==3
+ title('Normalized Images','fontsize',18)
+ end
+end
+
+
+
+%%
+%mean face;
+%  obtains the mean of each image - each row of S contains data for one
+%    image
+m=mean(S,2);
+%convert to unsigned 8-bit integer. Values range from 0 to 255
+tmimg=uint8(m);
+%takes the vector and creates a matrix
+img=reshape(tmimg,icol,irow);
+%matrix transpose
+img=img';
+figure(3);
+imshow(img);
+title('Mean Image','fontsize',18)
+meanImg = img
+img=[]  % Clear
+
+%%
+
+
+% %Normalize.
+% Mean and StdDev of values for mean image...
+img = reshape(meanImg, 1, icol*irow)
+um = mean(img)
+ustd = std(double(img))
+
+for i=1:size(S,2)
+ temp=double(S(:,i));
+ m=mean(temp);
+ st=std(temp);
+ S(:,i)=(temp-m)*ustd/st+um;
+end
+
+%%
+
+%save and show normalized images
+figure(2);
+for i=1:M
+ str=strcat(int2str(i),'.jpg');
+ img=reshape(S(:,i),icol,irow);
+ img=img';
+ eval('imwrite(img,str)');
+ subplot(sqrtM, sqrtM, i)
+ imshow(img)
+ drawnow;
+ if i==3
+ title('Normalized Images','fontsize',18)
+ end
+end
+
+%% 
+
+% show the difference from mean
+figure(4);
+Difference=[]
+for i=1:M
+    str=strcat(int2str(i),'.jpg');
+    img=reshape(S(:,i), icol, irow);
+    img=img';
+    img = img - meanImg;
+    subplot(sqrtM, sqrtM, i)
+    imshow(img)
+    drawnow;
+
+    if i==3
+    title('Difference of Normalized Images from the Mean','fontsize',18)
+    end
+    % Maybe this is supposed to be saved as Difference?
+    % Nope...
+    % Difference = [Difference img]
+end
+
+%%
+% Compute A matrix
+% Convert values to float
+dbx=[];
+for i=1:M
+ temp=double(S(:,i));
+ dbx=[dbx temp];
+end
+A=dbx';
+
+if M == 1
+    disp(A);
+end
+
+%Covariance matrix C=A'A, L=AA'
+L=A*A';
+% vv are the eigenvector for L
+% dd are the eigenvalue for both L=dbx'*dbx and C=dbx*dbx';
+[vv dd]=eig(L);
+% Sort and eliminate those whose eigenvalue is zero
+v=[];
+d=[];
+for i=1:size(vv,2)
+ if(dd(i,i)>1e-4)
+ v=[v vv(:,i)];
+ d=[d dd(i,i)];
+ end
+end
+
+%%
+%sort, will return an ascending sequence
+[B index]=sort(d);
+ind=zeros(size(index));
+dtemp=zeros(size(index));
+vtemp=zeros(size(v));
+len=length(index);
+for i=1:len
+ dtemp(i)=B(len+1-i);
+ ind(i)=len+1-index(i);
+ vtemp(:,ind(i))=v(:,i);
+end
+d=dtemp;
+v=vtemp;
+
+%%
+%Normalization of eigenvectors
+for i=1:size(v,2)
+ kk=v(:,i);
+ temp=sqrt(sum(kk.^2));
+ v(:,i)=v(:,i)./temp;
+end
+%Eigenvectors of C matrix
+u=[];
+for i=1:size(v,2)
+     temp=sqrt(d(i));
+ u=[u (dbx*v(:,i))./temp];
+end
+
+%%
+%Normalization of eigenvectors of the C matrix
+for i=1:size(u,2)
+ kk=u(:,i);
+ temp=sqrt(sum(kk.^2));
+ u(:,i)=u(:,i)./temp;
+end
+
+%%
+% show eigenfaces;
+EigenFaces = [];
+figure(5);
+for i=1:size(u,2)
+ img=reshape(u(:,i),icol,irow);
+ img=img';
+ img=histeq(img,255);
+ str = strcat('pics/eigenimages/', int2str(i));
+ str = strcat(str, '.jpg');
+ eval('imwrite(img,str)');
+ EigenFaces = [EigenFaces img];
+ subplot(ceil(sqrt(M)),ceil(sqrt(M)),i)
+ imshow(img)
+ drawnow;
+ if i==3
+ title('Eigenfaces','fontsize',18)
+ end
+end
+
+%%
+% Find the weight of each face for each image in the training set.
+% omega will store this information for the training set.
+omega = [];
+for h=1:size(dbx,2)
+ WW=[];
+ for i=1:size(u,2)
+ t = u(:,i)';
+ WeightOfImage = dot(t,dbx(:,h)');
+ WW = [WW; WeightOfImage];
+ end
+ omega = [omega WW];
+end
+
+%%
+% InputImage is the new (unseen) image
+% ensure that it is the same dimension image as the training set
+% We assume this new image is titled ‘new_image.jpg’
+img=0
+%img=imread('pics/instructors/broderick_300.jpg')
+img=imread('pics/instructors/jegelka_300.jpg')
+%img=imread('pics/instructors/7.jpg')
+if ndims(img)==3
+    img = rgb2gray(img);
+end
+InputImage=img
+figure(5)
+subplot(1,2,1)
+imshow(InputImage); colormap('gray');title('New image','fontsize',18)
+InImage=reshape(double(InputImage)',irow*icol,1);
+
+%%
+% Norm input image
+temp=InImage;
+me=mean(temp);
+st=std(temp);
+temp=(temp-me)*ustd/st+um;
+NormImage = temp;
+
+p = [];
+aa=size(u,2);
+% NormImage = InImage
+
+for i = 1:aa
+ pare = dot(NormImage,u(:,i));
+ p = [p; pare];
+end
+
+%%
+% m is the mean image, u is the eigenvector
+ReshapedImage = m + u(:,1:aa)*p;
+ReshapedImage = reshape(ReshapedImage,icol,irow);
+ReshapedImage = ReshapedImage';
+
+%show the reconstructed image.
+subplot(1,2,2)
+%imageshow(ReshapedImage); colormap('gray');title('Reconstructed image','fontsize',18)
+imagesc(ReshapedImage); colormap('gray');title('Reconstructed image','fontsize',18)
+
+%%
+% Compute the weights of the eigenfaces in the new image
+Difference = NormImage - MeanImage
+InImWeight = [];
+for i=1:size(u,2)
+ t = u(:,i)';
+ WeightOfInputImage = dot(t,Difference');
+ InImWeight = [InImWeight; WeightOfInputImage];
+end
+
+%%
+% Find distance
+e=[];
+for i=1:size(omega,2)
+ q = omega(:,i);
+ DiffWeight = InImWeight-q;
+ mag = norm(DiffWeight);
+ e = [e mag];
+end
+kk = 1:size(e,2);
+subplot(1,2,2)
