@@ -107,7 +107,7 @@ class RectangularRoom(object):
     def __repr__(self):
         _tiles = self.tiles.astype(np.str)
         for robot in self.robots:
-            _tiles[math.floor(robot.pos.y), math.floor(robot.pos.x)] = str(robot.direction)
+            _tiles[math.floor(robot.pos._y), math.floor(robot.pos._x)] = str(robot.direction)
         return str(_tiles[::-1, :])  # Print in standard coords, with y increasing to the north
 
     def cleanTileAtPosition(self, pos):
@@ -142,7 +142,7 @@ class RectangularRoom(object):
         n: an integer
         returns: True if (m, n) is cleaned, False otherwise
         """
-        return self.tiles[math.floor(pos.y), math.floor(pos.x)]
+        return self.tiles[math.floor(pos._y), math.floor(pos._x)]
 
     def getNumTiles(self):
         """
@@ -175,7 +175,7 @@ class RectangularRoom(object):
         pos: a Position object.
         returns: True if pos is in the room, False otherwise.
         """
-        return 0 <= pos.x < self.width and 0 <= pos.y < self.height
+        return 0 <= pos._x < self.width and 0 <= pos._y < self.height
 
 
 # === Problem 2
@@ -388,12 +388,12 @@ class SeekerRobot(Robot):
 
     def nearest_dirt_direction(self):
         # Calculate Manhattan distances to each dirty tile
-        distances = np.logical_not(self.room.tiles) * (np.abs(np.floor(self.pos.x) - self.room.xcoords) + np.abs(np.floor(self.pos.y) - self.room.ycoords))
+        distances = np.logical_not(self.room.tiles) * (np.abs(np.floor(self.pos._x) - self.room.xcoords) + np.abs(np.floor(self.pos._y) - self.room.ycoords))
         y, x = np.where(distances == np.min(distances[np.nonzero(np.logical_not(self.room.tiles))]))
         # print(x, y)
         x = x[0]
         y = y[0]
-        d = math.degrees(math.atan2(y - math.floor(self.pos.y), x - math.floor(self.pos.x)))
+        d = math.degrees(math.atan2(y - math.floor(self.pos._y), x - math.floor(self.pos._x)))
         # Transform from standard coords to NSEW coords
         direction = round((90 - d) % 360 / 90) * 90
         #print(f"\nRoom:\n{self.room}")
