@@ -16,7 +16,7 @@ def run(lot=None):
         raise ValueError("Pass a Lot object containing Wafers for analysis.")
 
     lot = Wafers.Lot("ALL")
-    for wafer in lot():
+    for wafer in lot:
         lot.add_wafer(wafer)
     data = lot.die_isbad_vector()
     means = data.mean(axis=0)  # Mean for each position
