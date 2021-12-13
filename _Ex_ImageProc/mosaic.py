@@ -5,9 +5,10 @@ import PIL.ImageFile
 import os
 import glob
 import numpy as np
+import shutil
 
 
-def mosaic(img, images, grid=None):
+def mosaic(img, images, grid=None, fast=False, enlarge=False):
     (x_size, y_size) = img.size
 
     if grid is None:
@@ -16,23 +17,42 @@ def mosaic(img, images, grid=None):
     if not len(grid) == 2:
         raise ValueError(f"grid must be a tuple of length 2: {grid}")
 
-    x_small = x_size // grid[0]
-    y_small = y_size // grid[1]
+    # Scan images to ensure all have same size
+    images_size = images_min_size(images)
+    if all([img.size == images_size for img in images]):
+        _images = images
+    else:
+        _images = images_resize(images_size, images)
 
-    #print(f"x_small, y_small: {x_small}, {y_small}")
+    # Size in pixels of each section of target image to convert to a mosaic tile
+    x_tile = x_size // grid[0]
+    y_tile = y_size // grid[1]
+
+    if enlarge:
+        # Assemble mosaic with full-size image tiles
+        # New image will likely have different size than original
+        x_insert, y_insert = images_size
+    else:
+        # Assemble mosaic with resized image tiles
+        # New image will be (nearly) the same size as the original
+        x_insert, y_insert = x_tile, y_tile
+
+    # print(f"x_small, y_small: {x_small}, {y_small}")
     n = len(images)
-    _images = [_img.resize(size=(x_small, y_small)) for _img in images]
-    #print("img size: ", _images[0].size)
+    # Try converting to array here
+    # _images = [_img.resize(size=(x_small, y_small)) for _img in images]
+    _images = np.array([np.array(_img.resize(size=(x_tile, y_tile)), dtype=np.uint8) for _img in images])
+    # print("img size: ", _images[0].size)
 
-    image_mosaic = np.zeros(shape=(y_small * grid[1], x_small * grid[0], 3), dtype=np.uint8)
+    image_mosaic = np.zeros(shape=(y_insert * grid[1], x_insert * grid[0], 3), dtype=np.uint8)
 
     for x in range(grid[0]):
         for y in range(grid[1]):
             #print(f"x,y: {x}, {y}")
-            small = img.crop((x * x_small, y * y_small, (x+1)*x_small, (y+1)*y_small))
+            small = img.crop((x * x_tile, y * y_tile, (x+1) * x_tile, (y+1) * y_tile))
 
-            nearest = im_proc.nearest(small, _images)
-            image_mosaic[y * y_small:(y+1)*y_small, x * x_small:(x+1)*x_small] = np.asarray(nearest)
+            nearest = im_proc.nearest(small, _images, fast=fast)
+            image_mosaic[y * y_insert:(y+1)*y_insert, x * x_insert:(x+1)*x_insert] = np.asarray(nearest)
 
             #PIL.Image.fromarray(image_mosaic).show()
 
@@ -59,7 +79,7 @@ def images_resize(size, in_folder, out_folder):
                 crop = img  # Already square
             elif x > y:
                 left = (x-y) // 2
-                crop = img.crop((left, 0, y, left + y))  # Center crop to square
+                crop = img.crop((left, 0, left + y, y))  # Center crop to square
             else:
                 top = (y-x) // 2
                 crop = img.crop((0, top, x, top + x))  # Center crop to square
@@ -71,5 +91,31 @@ def images_resize(size, in_folder, out_folder):
 
 def get_images(folder):
     return [im_proc.read_pic(file) for file in glob.glob(os.path.join(folder, "*.jp*"))]
+
+
+def images_min_size(images):
+    x = np.min([img.size[0] for img in images])
+    y = np.min([img.size[1] for img in images])
+    return x, y
+
+
+def images_delete_small(size, folder):
+    for filepath in glob.iglob(os.path.join(folder, "*.jp*")):
+        path, file = os.path.split(filepath)
+        base, ext = os.path.splitext(file)
+        print(base, ext)
+        #        continue
+
+        img = None
+        try:
+            img = im_proc.read_pic(filepath)
+        except TypeError:
+            raise
+
+        if isinstance(img, PIL.Image.Image):
+            x, y = img.size
+            if x < size[0] or y < size[1]:
+                os.remove(filepath)
+
 
 

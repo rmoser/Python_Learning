@@ -17,7 +17,10 @@ def read_pic(filename):
     # Reads data from JPEG filename
     # Returns numpy 2-d matrix with image data
     pic = PIL.Image.open(filename)
-    pic.load()
+
+    # Not sure this is necessary
+    # pic.load()
+
     # pic = PIL.ImageOps.equalize(pic)
     # size = pic.size  # PIL size returns pixels in (y, x)
 #    return np.asarray(pic, dtype="uint8").reshape(pic.size)
@@ -81,7 +84,7 @@ def dist(a, b):
     if not isinstance(b, np.ndarray):
         b = np.asarray(b)
 
-    return sp.spatial.distance.euclidean(a.flatten(), b.flatten())
+    return sp.spatial.distance.euclidean(a.flatten().astype(np.int), b.flatten().astype(np.int))
 
 
 def dists(i, arr):
@@ -92,13 +95,18 @@ def dists(i, arr):
     return [dist(i, img) for img in arr]
 
 
-def nearest(i, arr):
+def nearest(i, arr, fast=False):
     """
         Returns img from arr nearest (min distance from) target image i
     """
+    if fast:
+        arr = np.mean(np.array([np.array(i) for i in arr]), axis=(1, 2))
+        i = np.mean(np.array(i), axis=(1, 2))
+
     d = np.asarray(dists(i, arr))
     idx = np.argmin(d)
     return arr[idx]
+
 
 
 def name():
