@@ -243,7 +243,6 @@ class ResistantVirus(SimpleVirus):
         self.resistances = resistances
         self.mutProb = mutProb
 
-
     def getResistances(self):
         """
         Returns the resistances for this virus.
@@ -441,9 +440,11 @@ class TreatedPatient(Patient):
         return self.getTotalPop()
 
 
+
 #
 # PROBLEM 4
 #
+
 def simulationWithDrug(numViruses, maxPop, maxBirthProb, clearProb, resistances,
                        mutProb, numTrials):
     """
@@ -467,4 +468,34 @@ def simulationWithDrug(numViruses, maxPop, maxBirthProb, clearProb, resistances,
     
     """
 
-    # TODO
+    # random.seed(0)
+    simLength = 300
+    total = np.zeros(shape=(numTrials, simLength), dtype=int)
+    res = np.zeros(shape=(numTrials, simLength), dtype=int)
+
+    for trial in range(numTrials):
+        viruses = [ResistantVirus(maxBirthProb, clearProb, resistances, mutProb) for i in range(numViruses)]
+        patient = TreatedPatient(viruses, maxPop)
+
+        for t in range(simLength):
+            if t == 150:  # Administer guttagonol after 150 time steps
+                patient.addPrescription('guttagonol')
+
+            patient.update()
+            total[trial, t] = patient.getTotalPop()
+            res[trial, t] = patient.getResistPop(['guttagonol'])
+
+    total_means = [round(sum(total[:, t].tolist())/numTrials, 1) for t in range(simLength)]
+    res_means = [round(sum(res[:, t].tolist())/numTrials, 1) for t in range(simLength)]
+
+    pylab.plot(list(total_means), label="Total Virus")
+    pylab.plot(list(res_means), label="Resistant Virus")
+    pylab.title("ResistantVirus simulation")
+    pylab.xlabel("time step")
+    pylab.ylabel("# viruses")
+    pylab.legend(loc="best")
+    pylab.show()
+
+    return patient, total_means, res_means
+
+
