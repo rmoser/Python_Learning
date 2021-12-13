@@ -11,14 +11,15 @@ def test():
     # fig = w.plot()
     return w
 
+
 def run(lot=None):
     if lot is None:
         raise ValueError("Pass a Lot object containing Wafers for analysis.")
 
-    lot = Wafers.Lot("ALL")
-    for wafer in lot():
-        lot.add_wafer(wafer)
-    data = lot.die_isbad_vector()
+    _lot = Wafers.Lot("ALL")
+    for wafer in lot:
+        _lot.add_wafer(wafer)
+    data = _lot.die_isbad_vector()
     means = data.mean(axis=0)  # Mean for each position
     stddevs = data.std(axis=0)
 
@@ -26,10 +27,10 @@ def run(lot=None):
         # stddevs += np.min(stddevs[np.nonzero(stddevs)]) * 0.0001  # Adjust to avoid zero stddev
         stddevs += np.min(stddevs[np.nonzero(stddevs)]) * np.random.normal(size=len(stddevs)) * 0.0001  # Adjust to avoid zero stddev
 
-    w0 = lot.wafers[0].__deepcopy__()
+    w0 = _lot[list(_lot.wafer_ids)[0]].__deepcopy__()
     w1 = w0.__deepcopy__()
 
-    X, evals, evecs = PCA(data)
+    X, evals, evecs, r = PCA(data)
     v0 = evecs.T[0] * X[0][0]
     v1 = evecs.T[0] * X[80][0]
 
@@ -76,7 +77,7 @@ def run(lot=None):
     # Y = X / np.sqrt(eigvals)
     # C = np.array([y.reshape((300, 300)) for y in Y.T])
 
-    return lot, data, X, evals, evecs
+    return _lot, data, X, evals, evecs
 
 
 def gfa(shape=(2, 3), defect=None):
@@ -120,7 +121,6 @@ def defect_xy(wafer, bin=8, xy=(1, 1)):
         wafer[xy].bin = bin
 
 
-
 def PCA(data, dims_rescaled_data=2):
     """
     returns: data transformed in 2 dims/columns + regenerated original data
@@ -160,7 +160,7 @@ def test_PCA(data, dims_rescaled_data=2):
     'recovered' array with the original data
     '''
     m, n = data.shape
-    _, _, eigenvectors = PCA(data, dim_rescaled_data=2)
+    _, _, eigenvectors, _ = PCA(data, dims_rescaled_data=2)
     data_recovered = np.dot(eigenvectors, m).T
     data_recovered += data_recovered.mean(axis=0)
     assert np.allclose(data, data_recovered)
@@ -171,7 +171,7 @@ def plot_pca(data):
     clr1 = '#2026B2'
     fig = MPL.figure()
     ax1 = fig.add_subplot(111)
-    data_resc, _, _ = PCA(data)
+    _, _, _, data_resc = PCA(data)
     ax1.plot(data_resc[:, 0], data_resc[:, 1], '.', mfc=clr1, mec=clr1)
     MPL.show()
 
