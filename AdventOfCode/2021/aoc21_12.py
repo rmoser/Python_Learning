@@ -48,75 +48,6 @@ def read_net(s):
 
     return d
 
-#
-# def map_net(d, base, iters=-1):
-#     done = []
-#     result = []
-#     while iters != 0 and iters > -1000:
-#         l = len(base)
-#         result = []
-#         iters -= 1
-#         for chain in base:
-#             if chain in done:
-#                 result.append(chain)
-#                 continue
-#             # print(f"chain: {chain}")
-#             node = chain[-1]
-#             # print(f"node: {node}: {d[node]}")
-#             for n in d[node]:
-#                 # print(f"n: {n}")
-#                 if node != 'end' and (n.isupper() or n not in chain):
-#                     new = chain + (n,)
-#                     if new not in result:
-#                         result.append(new)
-#                 elif chain not in result:
-#                     result.append(chain)
-#             done.append(chain)
-#         # print(f"i: {iters}  result: {result}")
-#         base = result
-#         if len(result) == l:
-#             break
-#
-#     return result
-#
-#
-# def map_net2(d, base, iters=-1):
-#
-#     done = []
-#     todo = []
-#     result = []
-#     while iters != 0:
-#         l = len(base)
-#         result = []
-#         iters -= 1
-#         for chain in base:
-#             if chain[-1] == 'end':
-#                 result.append(chain)
-#                 continue
-#             if chain in done:
-#                 result.append(chain)
-#                 continue
-#             # print(f"chain: {chain}")
-#             node = chain[-1]
-#             # print(f"node: {node}: {d[node]}")
-#             for n in d[node]:
-#                 if n == 'start':
-#                     continue
-#                 # print(f"n: {n}")
-#                 if node != 'end' and (n.isupper() or chain.count(n) < 2):
-#                     new = chain + (n,)
-#                     if new not in result and valid_chain(new, 2):
-#                         result.append(new)
-#                 elif chain not in result:
-#                     result.append(chain)
-#             done.append(chain)
-#         # print(f"i: {iters}  result: {result}")
-#         base = result
-#         print(f"{iters} {l} <= {len(result)}", end='\n')
-#         if len(result) == l:
-#             break
-#     return result
-#
 
 def map_chain3(d, base=None, done=None, small_cave_repeat_limit=0, iters=-1):
     node_enum = ['start', 'end']
@@ -199,12 +130,6 @@ if __name__ == '__main__':
     d = read_net(text)
     # print(d)
 
-    # net = map_net(d, [('start',)], -1)
-    # net = map_net(d, [('start',)], -1)
-    # _ = [print(x) for x in net]
-
-    # net1 = [x for x in net if x[-1] == 'end' and valid_path(x, 1)]
-
     net1 = map_chain3(d, iters=-1)
     pone = len(net1[2])
 
@@ -212,5 +137,4 @@ if __name__ == '__main__':
     ptwo = len(net2[2])
 
     print(f"AOC {year} day {day}  Part One: {pone}")
-
     print(f"AOC {year} day {day}  Part Two: {ptwo}")
