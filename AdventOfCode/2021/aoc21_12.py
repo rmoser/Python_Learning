@@ -35,7 +35,7 @@ def read_net(s):
     d = dict()
     for line in s:
         a, b = line.split("-")
-        print(a, b)
+        # print(a, b)
         if a not in d:
             d[a] = set()
         if a != 'end' and b != 'start':
@@ -70,7 +70,7 @@ def map_chain3(d, base=None, done=None, small_cave_repeat_limit=0, iters=-1):
             # print(k, v)
             _d[node_dict[k]] = {node_dict[x] for x in v}
 
-    print(_d)
+    # print(_d)
 
     # print(node_enum, node_dict)
 

@@ -53,8 +53,8 @@ def print_paper(paper):
 
 
 if __name__ == '__main__':
-    pone = 0
-    ptwo = 0
+    pone = ''
+    ptwo = ''
 
     text = text1
     text = text.strip().splitlines()
@@ -84,8 +84,8 @@ if __name__ == '__main__':
 
     # print_paper(new)
 
-    print(insts)
-    print(y_max, x_max)
+    # print(insts)
+    # print(y_max, x_max)
 
     pone = new.sum()
 
@@ -93,7 +93,8 @@ if __name__ == '__main__':
 
     for inst in insts:
         paper = fold(paper, inst)
-    print_paper(paper)
 
     print(f"AOC {year} day {day}  Part Two: {ptwo}")
+
+    print_paper(paper)
 
