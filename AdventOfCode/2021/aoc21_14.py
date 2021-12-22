@@ -28,6 +28,7 @@ CN -> C
 """
 text1 = aocd.get_data(day=day, year=year)
 
+
 def parse_pair(pairs, d, n=1):
     for _ in range(n):
         new = dict()
