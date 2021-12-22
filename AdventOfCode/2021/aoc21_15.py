@@ -32,29 +32,41 @@ moves = np.array([[0, 1], [0, -1], [1, 0], [-1, 0]])
 
 pos_dict = dict()
 
+
 def initial_result(arr):
     result = np.zeros(arr.shape, dtype=int)
+    rows = tuple(range(arr.shape[0]))
+    cols = tuple(range(arr.shape[1]))
+
     csr = np.cumsum(arr, axis=1)
     csc = np.cumsum(arr, axis=0)
 
+    for row in rows:
+        csr[row, :] += csc[row, 0]
+    for col in cols:
+        csc[:, col] += csr[0, col]
+
     # First col and first row from cum sums
-    result[0,:] = csr[0,:]
-    result[:,0] = csr[:,0]
+    result[0, :] = csr[0, :]
+    result[:, 0] = csc[:, 0]
+
+    for r in range(1, arr.shape[0]):
+        for c in range(1, arr.shape[1]):
+            result[r, c] = arr[r, c] + np.min(result[r-1, c], result[r, c-1])
+    return result
 
 
-    for r in range(arr.shape[0]):
-        pass
-
-
-def make_paths(arr, result=None, iters=-1):
+def make_paths(arr, result=None, stack=None, iters=-1):
     if result is None or result.shape != arr.shape:
         result = np.full(arr.shape, fill_value=np.inf)
-        result[0, 0] = 0
 
-    stack = [tuple(x) for x in np.ndindex(arr.shape)]
+    if stack is None or len(stack) == 0:
+        stack = [tuple(x) for x in np.ndindex(arr.shape)]
 
     while len(stack) and iters != 0:
         iters -= 1
+        if iters >= 0 and iters % 1000 == 0:
+            print(iters, end='\r')
         coord = stack.pop(0)
 
         if coord == (0, 0):
@@ -67,10 +79,11 @@ def make_paths(arr, result=None, iters=-1):
         if score < result[coord]:
             result[coord] = score
             for c in idx:
-                if tuple(c) not in stack:
-                    stack.append(tuple(c))
+                c = tuple(c)
+                if c not in stack:
+                    stack.append(c)
 
-    return result.astype(int)
+    return result, stack
 
 
 def validpath(p, arr):
@@ -124,17 +137,17 @@ if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    text = text0
+    text = text1
     text = text.strip().splitlines()
 
     arr = np.array([list(x) for x in text]).astype(int)
     # arr[0, 0] = 0
     # print(arr)
 
-    result = make_paths(arr)
+    result, _ = make_paths(arr)
     # print(result)
 
-    pone = result[-1, -1] - result[0, 0]
+    pone = int(result[-1, -1] - result[0, 0])
     print(f"AOC {year} day {day}  Part One: {pone}")
 
     arr2 = arr
@@ -144,12 +157,11 @@ if __name__ == '__main__':
     for r in range(1, 5):
         arr2 = np.append(arr2, row + r, axis=0)
     arr2 = (arr2 - 1) % 9 + 1
-    arr2[(0, 0)] = 0
 
     result2 = np.append(result.astype(int), np.full(shape=(result.shape[0], result.shape[1]*4), fill_value=np.inf), axis=1)
     result2 = np.append(result2, np.full(shape=(result.shape[0]*4, result.shape[1]*5), fill_value=np.inf), axis=0)
 
-    result2 = make_paths(arr2, result=result2)
-    ptwo = result2[-1, -1] - result2[0, 0]
+    result2, _ = make_paths(arr2, result=result2)
+    ptwo = int(result2[-1, -1] - result2[0, 0])
 
     print(f"AOC {year} day {day}  Part Two: {ptwo}")
