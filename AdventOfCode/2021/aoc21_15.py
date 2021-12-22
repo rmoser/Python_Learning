@@ -34,68 +34,36 @@ pos_dict = dict()
 
 
 def initial_result(arr):
-    result = np.zeros(arr.shape, dtype=int)
-    rows = tuple(range(arr.shape[0]))
-    cols = tuple(range(arr.shape[1]))
-
-    csr = np.cumsum(arr, axis=1)
-    csc = np.cumsum(arr, axis=0)
-
-    for row in rows:
-        csr[row, :] += csc[row, 0]
-    for col in cols:
-        csc[:, col] += csr[0, col]
-
-    # First col and first row from cum sums
-    result[0, :] = csr[0, :]
-    result[:, 0] = csc[:, 0]
-
-    for r in range(1, arr.shape[0]):
-        for c in range(1, arr.shape[1]):
-            result[r, c] = arr[r, c] + np.min(result[r-1, c], result[r, c-1])
-    return result
+    csr0 = np.atleast_2d(np.cumsum(arr[0, :]))
+    csc = np.cumsum(np.append(csr0, arr[1:, :], axis=0), axis=0)
+    csr = np.cumsum(np.append(np.atleast_2d(csc[:, 0]).T, arr[:, 1:], axis=1), axis=1)
+    return np.minimum(csr, csc)
 
 
-def make_paths(arr, result=None, stack=None, iters=-1):
+def make_paths(arr, result=None, iters=-1):
     if result is None or result.shape != arr.shape:
-        result = np.full(arr.shape, fill_value=np.inf)
+        result = initial_result(arr)
 
-    if stack is None or len(stack) == 0:
-        stack = [tuple(x) for x in np.ndindex(arr.shape)]
-
-    while len(stack) and iters != 0:
+    changed = True
+    while changed and iters != 0:
         iters -= 1
         if iters >= 0 and iters % 1000 == 0:
             print(iters, end='\r')
-        coord = stack.pop(0)
 
-        if coord == (0, 0):
-            result[coord] = 0
+        _arr = np.full(shape=np.array(result.shape) + 2, fill_value=np.inf)
+        _arr[1:-1, 1:-1] = result
 
-        idx = moves + coord
-        idx = [x for x in idx if (x >= (0, 0)).all() and (x < arr.shape).all()]
-        loc = tuple(np.array(idx).T)
-        score = result[loc].min() + arr[coord]
-        if score < result[coord]:
-            result[coord] = score
-            for c in idx:
-                c = tuple(c)
-                if c not in stack:
-                    stack.append(c)
+        _r0 = _arr[1:-1, 2:]
+        _r1 = _arr[1:-1, :-2]
+        _r2 = _arr[2:, 1:-1]
+        _r3 = _arr[:-2, 1:-1]
+        _rx = np.array([_r0, _r1, _r2, _r3]).min(axis=0)
+        _r = np.minimum(_rx + arr, result)
 
-    return result, stack
+        changed = (result != _r).any()
+        result = _r
 
-
-def validpath(p, arr):
-    if p[0] != (0, 0):
-        return False
-    if p[-1] != arr.shape:
-        return False
-
-    for (a0, a1), (b0, b1) in zip(p[:-1], p[1:]):
-        if abs(a1-a0) + abs(b1-b0) > 1:
-            return False
-    return True
+    return result
 
 
 def score_path(p, arr):
@@ -144,7 +112,7 @@ if __name__ == '__main__':
     # arr[0, 0] = 0
     # print(arr)
 
-    result, _ = make_paths(arr)
+    result = make_paths(arr)
     # print(result)
 
     pone = int(result[-1, -1] - result[0, 0])
@@ -161,7 +129,7 @@ if __name__ == '__main__':
     result2 = np.append(result.astype(int), np.full(shape=(result.shape[0], result.shape[1]*4), fill_value=np.inf), axis=1)
     result2 = np.append(result2, np.full(shape=(result.shape[0]*4, result.shape[1]*5), fill_value=np.inf), axis=0)
 
-    result2, _ = make_paths(arr2, result=result2)
+    result2 = make_paths(arr2, result=result2)
     ptwo = int(result2[-1, -1] - result2[0, 0])
 
     print(f"AOC {year} day {day}  Part Two: {ptwo}")
