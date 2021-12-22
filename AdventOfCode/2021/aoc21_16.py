@@ -5,6 +5,9 @@ day = 16
 import numpy as np
 import aocd
 import math
+import logging
+
+# logging.basicConfig(level=logging.DEBUG)
 
 text0 = """
 D2FE28
@@ -30,6 +33,29 @@ TABS = 0
 TAB = '\t'
 
 
+def hex2bin(s):
+    d = {
+        '0': '0000',
+        '1': '0001',
+        '2': '0010',
+        '3': '0011',
+        '4': '0100',
+        '5': '0101',
+        '6': '0110',
+        '7': '0111',
+        '8': '1000',
+        '9': '1001',
+        'A': '1010',
+        'B': '1011',
+        'C': '1100',
+        'D': '1101',
+        'E': '1110',
+        'F': '1111'
+    }
+
+    return ''.join((d[c] for c in list(s)))
+
+
 def parse_packet(packet, is_hex=False, packet_limit=None):
     global TABS, TAB
     TABS += 1
@@ -40,42 +66,40 @@ def parse_packet(packet, is_hex=False, packet_limit=None):
     result = []
 
     if is_hex:
-        bits = bin(int(packet, 16))[2:]
-        l = ((len(bits) + 3) // 4) * 4
-        bits = bits.rjust(l, '0')
-        # print(f"\n{TAB*TABS}HEX-BITS: {packet} == {bits}")
+        bits = hex2bin(packet)
+        logging.debug(f"{TAB*TABS}HEX-BITS: {packet} == {bits}")
     else:
         bits = packet
 
     while len(bits) > 10 and len(result) < packet_limit:
-        # print(f"\n{TAB*TABS}BITS: {bits}")
+        logging.debug(f"{TAB*TABS}BITS: {bits}")
         v, bits = int(bits[:3], 2), bits[3:]
         t, bits = int(bits[:3], 2), bits[3:]
 
-        # print(f"{TAB*TABS}v: {v}, t: {t}")
+        logging.debug(f"{TAB*TABS}v: {v}, t: {t}")
 
         if t == 4:
             # literal value packet
             num, bits = value(bits)
-            # print(f"{TAB*TABS}Value packet: {num}")
+            logging.debug(f"{TAB*TABS}Value packet: {num}")
             result.append((v, t, num))
 
         else:
             # operator packet
             i, bits = bits[0], bits[1:]
-            # print(f"{TAB*TABS}Oper packet: I={i}, {bits}")
+            logging.debug(f"{TAB*TABS}Oper packet: I={i}, {bits}")
 
             if i == '0':
                 n, bits = int(bits[:15], 2), bits[15:]
                 sub_packet, bits = bits[:n], bits[n:]
-                # print(f"{TAB*TABS}{n} bits: {sub_packet}")
+                logging.debug(f"{TAB*TABS}{n} bits: {sub_packet}")
                 x, _ = parse_packet(sub_packet)
                 result.append((v, t, x))
 
             else:
                 n, bits = int(bits[:11], 2), bits[11:]
 
-                # print(f"{TAB*TABS}{n} packets: {bits}")
+                logging.debug(f"{TAB*TABS}{n} packets: {bits}")
                 x, bits = parse_packet(bits, packet_limit=n)
                 result.append((v, t, x[:n]))
 
@@ -90,7 +114,7 @@ def value(s):
         result += chunk[1:]
         if chunk[0] == '0':
             break
-    # print(result, int(result, 2))
+        # logging.debug((result, int(result, 2)))
     return int(result, 2), s
 
 
@@ -120,7 +144,7 @@ def score(arr):
         return 0
 
     while True:
-        # print(f"{TAB * TABS} arr: {arr}")
+        logging.debug(f"{TAB * TABS} arr: {arr}")
 
         if isinstance(arr, int):
             return arr
@@ -136,54 +160,54 @@ def score(arr):
                 continue
             v, operation, operand = chunk
             if isinstance(operand, int) or all(isinstance(x, int) for x in operand):
-                # print(f"{TAB * TABS} {i}, {operation} -> {operand}")
+                logging.debug(f"{TAB * TABS} {i}, {operation} -> {operand}")
 
                 if operation == 4:
-                    # print(f"{TAB * TABS} STATIC: {operand}")
+                    logging.debug(f"{TAB * TABS} STATIC: {operand}")
                     arr[i] = operand
                     continue
 
-                # print(f"{TAB * TABS} Recurse Operand: {operand}")
+                logging.debug(f"{TAB * TABS} Recurse Operand: {operand}")
                 TABS += 1
                 operand = score(operand)
-                # print(f"{TAB * TABS} Recurse Got: {operand}")
+                logging.debug(f"{TAB * TABS} Recurse Got: {operand}")
                 TABS -= 1
                 if operation == 0:
-                    # print(f"{TAB * TABS} Sum: {operand}")
+                    logging.debug(f"{TAB * TABS} Sum: {operand}")
                     if isinstance(operand, int):
                         arr[i] = operand
                     else:
                         arr[i] = sum(operand)
                 elif operation == 1:
-                    # print(f"{TAB * TABS} Prod: {operand}")
+                    logging.debug(f"{TAB * TABS} Prod: {operand}")
                     if isinstance(operand, int):
                         arr[i] = operand
                     else:
                         arr[i] = math.prod(operand)
                 elif operation == 2:
-                    # print(f"{TAB * TABS} Min: {operand}")
+                    logging.debug(f"{TAB * TABS} Min: {operand}")
                     if isinstance(operand, int):
                         arr[i] = operand
                     else:
                         arr[i] = min(operand)
                 elif operation == 3:
-                    # print(f"{TAB * TABS} Max: {operand}")
+                    logging.debug(f"{TAB * TABS} Max: {operand}")
                     if isinstance(operand, int):
                         arr[i] = operand
                     else:
                         arr[i] = max(operand)
                 elif operation == 5:
-                    # print(f"{TAB * TABS} >: {operand}")
+                    logging.debug(f"{TAB * TABS} >: {operand}")
                     arr[i] = int(operand[0] > operand[1])
                 elif operation == 6:
-                    # print(f"{TAB * TABS} <: {operand}")
+                    logging.debug(f"{TAB * TABS} <: {operand}")
                     arr[i] = int(operand[0] < operand[1])
                 elif operation == 7:
-                    # print(f"{TAB * TABS} =: {operand}")
+                    logging.debug(f"{TAB * TABS} =: {operand}")
                     arr[i] = int(operand[0] == operand[1])
 
             else:
-                # print(f"{TAB * TABS} Recurse: {arr[i]}")
+                logging.debug(f"{TAB * TABS} Recurse: {arr[i]}")
                 TABS += 1
                 arr[i] = (v, operation, score(operand))
                 TABS -= 1
@@ -193,30 +217,25 @@ if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    text = text0
+    text = text1
     text = text.strip().splitlines()
 
-    # text = text[4:5]
+    # text = text[8:9]
 
     d = dict()
     for packet in text:
         x, _ = parse_packet(packet, is_hex=True)
         d[packet] = x
 
-    # print("\n\nSUMMARY")
+    logging.debug("SUMMARY")
     total = 0
     for k, v in d.items():
         _score = sum_version(v)
-        # print(k, _score, v)
+        logging.debug((k, _score, v))
         total += _score
 
     pone = total
     print(f"AOC {year} day {day}  Part One: {pone}")
 
-    print(d[text[8]])
-    print(score(d[text[8]]))
-
-    for k, v in d.items():
-        print(k, score(v))
-
+    ptwo = score(list(d.values())[0])
     print(f"AOC {year} day {day}  Part Two: {ptwo}")
