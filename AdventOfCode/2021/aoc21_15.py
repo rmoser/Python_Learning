@@ -32,6 +32,19 @@ moves = np.array([[0, 1], [0, -1], [1, 0], [-1, 0]])
 
 pos_dict = dict()
 
+def initial_result(arr):
+    result = np.zeros(arr.shape, dtype=int)
+    csr = np.cumsum(arr, axis=1)
+    csc = np.cumsum(arr, axis=0)
+
+    # First col and first row from cum sums
+    result[0,:] = csr[0,:]
+    result[:,0] = csr[:,0]
+
+
+    for r in range(arr.shape[0]):
+        pass
+
 
 def make_paths(arr, result=None, iters=-1):
     if result is None or result.shape != arr.shape:
@@ -77,11 +90,41 @@ def score_path(p, arr):
     return arr[idx].sum()
 
 
+def print_path(arr, path):
+    if path is None:
+        path = []
+    result = ''
+    for r in range(arr.shape[0]):
+        for c in range(arr.shape[1]):
+            if c == 0 and len(result):
+                result += '\n'
+            if (r, c) in path:
+                result += '\033[36m' + str(arr[r,c]) + '\033[0m'
+            else:
+                result += str(arr[r,c])
+    print(result)
+
+
+def grad_descent(arr):
+    path = [(arr.shape[0]-1, arr.shape[1]-1)]
+    coord = path[0]
+    for _ in range(np.product(arr.shape)):
+        idx = moves + coord
+        scores = [arr[tuple(x)] if (x >= (0, 0)).all() and (x < arr.shape).all() else np.inf for x in idx]
+        coord = tuple(idx[np.argmin(scores)])
+        path.append(coord)
+
+        if coord == (0, 0):
+            return path
+
+    raise ValueError("No valid path found")
+
+
 if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    text = text1
+    text = text0
     text = text.strip().splitlines()
 
     arr = np.array([list(x) for x in text]).astype(int)
