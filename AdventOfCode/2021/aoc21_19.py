@@ -4,8 +4,9 @@ day = 19
 
 import numpy as np
 import aocd
+import itertools
 
-text0 = """ 
+text0 = """
 --- scanner 0 ---
 404,-588,-901
 528,-643,409
@@ -164,8 +165,8 @@ ROT_Z = np.array([
     [ 0,  0,  1]
 ])
 
-ROT_XS = [ROT_X]
-for i in range(3):
+ROT_XS = [np.identity(3, dtype=int)]
+for _ in range(3):
     ROT_XS.append(ROT_XS[-1].dot(ROT_X))
 ROT_XS = np.array(ROT_XS)
 
@@ -195,7 +196,8 @@ def rot(arr):
 def read_scanners(scanner_text):
     scanners = []
     s = []
-    for line in text:
+    end = len(text)-1
+    for l, line in enumerate(text):
         if not len(line):
             continue
         if '--' in line:
@@ -204,22 +206,69 @@ def read_scanners(scanner_text):
                 scanners.append(np.array(s).astype(int))
                 s = []
             continue
+
         s.append(line.split(','))
+        if l == end and len(s):
+            scanners.append(np.array(s).astype(int))
+            s = []
 
     return scanners
+
+
+def match(a, b):
+    a_coords = set([tuple(c) for c in a])
+
+    for r, b_rot in enumerate(rot(b)):
+        pairs = itertools.product(a, b_rot)
+
+        for ca, cb in pairs:
+            offset = ca - cb
+            _b = b_rot + offset
+            if len(a_coords & set([tuple(c) for c in _b])) >= 12:
+                return True, r, offset, _b
+
+    return False, None, None, None
 
 
 if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    text = text0
+    text = text1
 
     text = text.strip().splitlines()
 
     scanners = read_scanners(text)
 
-    print(scanners)
+    matched = np.zeros(shape=len(scanners), dtype=int)
+    offsets = np.zeros(shape=(len(scanners), 3))
+    rotations = matched.copy()
+    matched[0] = True
+    offsets[0] = np.array([0, 0, 0])
+    # First scanner rotation is zero by convention
+
+    scanner_map = set([tuple(c) for c in scanners[0]])  # Init to compile all rotated coordinates
+
+    while not matched.all():
+        print(f"Matched {matched.sum()} / {len(matched)} scanners...")
+        print(matched)
+        for i, m in enumerate(matched):
+            if m:
+                continue
+            b = scanners[i]
+            print(f"Check match {i}...")
+            m, rotation, offset, rot_b = match(scanner_map, b)
+            if m:
+                print(f"Match {i} {rotation} {offset}")
+                matched[i] = m
+                scanners[i] = rot_b
+                rotations[i] = rotation
+                offsets[i] = offset
+                scanner_map |= set([tuple(c) for c in rot_b])
+
+    pone = len(scanner_map)
     print(f"AOC {year} day {day}  Part One: {pone}")
+
+    ptwo = int(max([np.linalg.norm(a-b, ord=1) for a, b in itertools.product(offsets, offsets)]))
 
     print(f"AOC {year} day {day}  Part Two: {ptwo}")
