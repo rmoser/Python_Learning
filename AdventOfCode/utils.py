@@ -79,11 +79,6 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
     end = {tuple(end)} if end else set()
     path = set([tuple(p) for p in path]) - start - end if path else set()
 
-    # Extend width to support format codes
-    dt = np.dtype(('U', arr.dtype.itemsize // arr.dtype.alignment + 30))  # Guess at how much larger it needs to be
-    arr = arr.astype(dt)
-    # print(dt)
-
     for p in start | end | path:
         c = arr[p]
         if p in start:
@@ -93,10 +88,9 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
         else:
             _c = text_format(c, foreground='black', background='white', style='bold')
 
+        # Update array data width when necessary to avoid overruns
         if len(_c) > arr.dtype.itemsize // arr.dtype.alignment:
-            print('inc')
-            dt = np.dtype(
-                ('U', len(_c)+90))  # Guess at how much larger it needs to be
+            dt = np.dtype(('U', len(_c)))  # Guess at how much larger it needs to be
             arr = arr.astype(dt)
         arr[p] = _c
 
