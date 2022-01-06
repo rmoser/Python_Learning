@@ -45,7 +45,7 @@ def text_format(text, foreground=None, background=None, style=None):
         if not isinstance(codes, list):
             codes = [codes]
         codes = ';'.join([str(x) for x in codes])
-        return f"\033[{codes}m" + text + "\033[0;0;0m"
+        return f"\033[{codes}m" + text + "\033[0m"
 
     if foreground is None and background is None:
         col = 12
@@ -75,23 +75,30 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
     if translate:
         arr = np.char.translate(arr, translate)
 
+    start = {tuple(start)} if start else set()
+    end = {tuple(end)} if end else set()
+    path = set([tuple(p) for p in path]) - start - end if path else set()
+
     # Extend width to support format codes
-    dt = np.dtype(('U', arr.dtype.itemsize // arr.dtype.alignment + 30))
+    dt = np.dtype(('U', arr.dtype.itemsize // arr.dtype.alignment + 30))  # Guess at how much larger it needs to be
     arr = arr.astype(dt)
-    print(dt)
+    # print(dt)
 
-    if start:
-        arr[start] = text_format(arr[start], foreground='normal', background='green', style='bold')
-    if end:
-        arr[end] = text_format(arr[end], foreground='normal', background='red', style='bold')
-    if path:
-        # Highlight path, excluding start and end
-        intermed = [tuple(p) for p in set(path) - set(start) - set(end)]
-        # print(intermed)
-        for p in intermed:
-            arr[p] = text_format(arr[p], foreground='black', background='white', style='bold')
-            # print(p, ": ", len(arr[p]))
+    for p in start | end | path:
+        c = arr[p]
+        if p in start:
+            _c = text_format(c, foreground='black', background='green', style='bold')
+        elif p in end:
+            _c = text_format(c, foreground='black', background='red', style='bold')
+        else:
+            _c = text_format(c, foreground='black', background='white', style='bold')
 
+        if len(_c) > arr.dtype.itemsize // arr.dtype.alignment:
+            print('inc')
+            dt = np.dtype(
+                ('U', len(_c)+90))  # Guess at how much larger it needs to be
+            arr = arr.astype(dt)
+        arr[p] = _c
 
     if dist:
         pad = max(len(str(k)) for k in dist)
@@ -161,13 +168,17 @@ if __name__ == '__main__':
     print()
 
     print("show(maze):")
-    maze = np.zeros(shape=(10, 10), dtype=int)
+    maze = np.random.randint(0, 2, 100, dtype=int).reshape((10, 10))
     start = (0, 0)
     end = (9, 9)
     path = [(0,0)]
     for i in range(1, 10):
-        path.append((i-1, i))
-        path.append((i, i))
+        p = (i-1, i)
+        maze[p] = 0
+        path.append(p)
+        p = (i, i)
+        maze[p] = 0
+        path.append(p)
 
     show(maze, start, end, path)
 
