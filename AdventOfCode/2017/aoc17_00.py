@@ -14,7 +14,9 @@ if __name__ == '__main__':
     ptwo = ''
 
     text = text0
-    text = text.strip().splitlines()
+    text = text.strip()
+    if '\n' in text:
+        text = text.splitlines()
 
 
     print(f"AOC {year} day {day}  Part One: {pone}")
