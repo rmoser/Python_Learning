@@ -43,7 +43,7 @@ if __name__ == '__main__':
         particle = np.array([y.split('<')[1].strip().split(',') for y in line.split('>') if y], dtype=int)
         particles[i] = particle
 
-    for _ in range(1000):
+    for _ in range(1000):  # Just guessed that 1000 cycles is enough
         for i, particle in enumerate(particles):
             if not mask[i]:
                 continue
