@@ -111,6 +111,18 @@ def show(screen, start=None, end=None, path=None, dist=None):
     print(result)
 
 
+def map_from_text(text):
+    if isinstance(text, str):
+        text = text.strip().split('\n')
+    if isinstance(text, list):
+        rows = len(text)
+        cols = len(text[0])
+        arr = np.full((rows, cols), fill_value='')
+        for row, line in enumerate(text):
+            arr[row] = list(line)
+    return arr
+
+
 def valid_path(maze, start, end, paths=None, iters=-1, debug=False):
     moves = np.array([(1, 0), (-1, 0), (0, 1), (0, -1)])
     if not paths:
