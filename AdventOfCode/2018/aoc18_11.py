@@ -29,6 +29,15 @@ def max_power(arr, size=3):
     return p
 
 
+def max_power2(arr):
+    p = np.zeros(shape=(300, 300, 300), dtype=int)
+    for s in range(1, 300):
+        for x in range(300-s):
+            for y in range(300-s):
+                p[(x,y,s)] = arr[x:x+s, y:y+s].sum()
+    return p
+
+
 if __name__ == '__main__':
     pone = ''
     ptwo = ''
@@ -54,17 +63,19 @@ if __name__ == '__main__':
 
     print(f"AOC {year} day {day}  Part One: {pone}")
 
-    l = [((0, 0), 0)]
+    # p = max_power2(arr)
+
+    recipes = [((0, 0), 0)]
     for i in range(1, 300):
         m = max_power(arr, i)
         a = m.argmax()
         x = a // (300 - i)
         y = a % (300 - i)
-        l.append(((x,y), m[(x,y)]))
+        recipes.append(((x, y), m[(x, y)]))
 
-    m = np.array([x[1] for x in l])
+    m = np.array([x[1] for x in recipes])
     a = m.argmax()
-    x, y = l[a][0]
+    x, y = recipes[a][0]
     ptwo = f"{x},{y},{a}"
 
     print(f"AOC {year} day {day}  Part Two: {ptwo}")

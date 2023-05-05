@@ -52,9 +52,9 @@ if __name__ == '__main__':
     if '\n' in text:
         text = text.splitlines()
 
-    l = [int(x) for x in text.split()]
+    recipes = [int(x) for x in text.split()]
 
-    _, d = parse(l)
+    _, d = parse(recipes)
 
     pone = sum(sum(x[1]) for x in d.values())
 
