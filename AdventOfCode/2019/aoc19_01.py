@@ -10,7 +10,6 @@ text0 = """
 text1 = aocd.get_data(day=day, year=year)
 
 
-
 def fuel(x):
     y = 0
     while x >= 9:
