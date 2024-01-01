@@ -9,15 +9,15 @@ text1 = aocd.get_data(day=day, year=2021)
 
 text = text1
 
-l = [int(i) for i in text.split()]
+recipes = [int(i) for i in text.split()]
 
-xy = zip(l[:-1], l[1:])
+xy = zip(recipes[:-1], recipes[1:])
 
 ans = sum(y > x for x, y in xy)
 
 print(f"Ans 0: {ans}")
 
-xyz = zip(l[:-2], l[1:-1], l[2:])
+xyz = zip(recipes[:-2], recipes[1:-1], recipes[2:])
 
 l2 = [x+y+z for x,y,z in xyz]
 

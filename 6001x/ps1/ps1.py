@@ -1,7 +1,7 @@
 print("Please think of a number between 0 and 100!")
 i = 'h'
 h = 100
-l = 0
+recipes = 0
 g = 50
 
 print("Is your secret number {}?".format(g))
@@ -15,9 +15,9 @@ while i != 'c':
             break
         elif i == 'h':
             h = g
-            g = (g + l) // 2
+            g = (g + recipes) // 2
         elif i == 'l':
-            l = g
+            recipes = g
             g = round(g + h) // 2
 
     print("Is your secret number {}?".format(g))

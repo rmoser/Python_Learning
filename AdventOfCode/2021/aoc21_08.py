@@ -73,7 +73,7 @@ if __name__ == '__main__':
         n = len(translations)
 
         a = b = 0
-        for l, line in enumerate(text1.splitlines()):
+        for recipes, line in enumerate(text1.splitlines()):
             patterns, code = line.split(" | ")
             for part in code.split():
                 a += len(part) in {2, 3, 4, 7}
