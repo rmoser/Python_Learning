@@ -69,8 +69,8 @@ if __name__ == '__main__':
 
     d = dict()
 
-    for l, line in enumerate(text):
-        print(f"line {l}: {line}")
+    for recipes, line in enumerate(text):
+        print(f"line {recipes}: {line}")
         line = line.split()
         if line[0] == 'value':
             value = int(line[1])

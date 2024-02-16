@@ -50,7 +50,7 @@ def pic_km(image, k=None, ratio=None):
         ratio = 1 / ratio
 
     large = np.asarray(image)
-    small = np.asarray(image.resize(size=np.ceil((image.width * ratio, image.height * ratio)).astype(np.int)))
+    small = np.asarray(image.resize(size=np.ceil((image.width * ratio, image.height * ratio)).astype(int)))
 
     flat_large = large.reshape(-1, large.shape[-1])  # Flatten to one row per pixel
     flat_small = small.reshape(-1, large.shape[-1])
@@ -84,7 +84,7 @@ def dist(a, b):
     if not isinstance(b, np.ndarray):
         b = np.asarray(b)
 
-    return sp.spatial.distance.euclidean(a.flatten().astype(np.int), b.flatten().astype(np.int))
+    return sp.spatial.distance.euclidean(a.flatten().astype(int), b.flatten().astype(int))
 
 
 def dists(i, arr):
@@ -106,7 +106,6 @@ def nearest(i, arr, fast=False):
     d = np.asarray(dists(i, arr))
     idx = np.argmin(d)
     return arr[idx]
-
 
 
 def name():
@@ -205,11 +204,11 @@ def grid(images, shape=(), repeat=False, scale=None):
 
 
 if __name__ == '__main__':
-    file = 'Alpenrose Team Picture.jpeg'
+    file = 'IMG_6158.jpg'
     folder = r'C:\Users\rmose\Desktop\pics'
     file = path.join(folder, file)
     base, ext = os.path.splitext(file)
-    folder = os.path.join(folder, "Alpenrose")
+    folder = os.path.join(folder, "Mystic")
     if not os.path.isdir(folder):
         os.mkdir(folder)
 
@@ -224,7 +223,9 @@ if __name__ == '__main__':
 
     #small = pic.resize(dims)
     small = pic
-    outfull = os.path.join(folder, f"Gavin___{ext}")
+
+    nm = "Mystic"
+    outfull = os.path.join(folder, f"{nm}___{ext}")
     if not os.path.exists(outfull):
         small.save(outfull)
 
@@ -232,7 +233,7 @@ if __name__ == '__main__':
     print(f"Ratio: {ratio}")
 
     for i in range(2, 20):
-        outfile = f"Gavin_{str(i).zfill(2)}{ext}"
+        outfile = f"{nm}_{str(i).zfill(2)}{ext}"
         outfull = os.path.join(folder, outfile)
         if os.path.exists(outfull):
             print(f"Already have Image {i}: {outfile}...")

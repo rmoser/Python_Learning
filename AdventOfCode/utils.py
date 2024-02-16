@@ -106,8 +106,8 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
     return result
 
 
-def show(screen, start=None, end=None, path=None, dist=None):
-    result = show_string(screen, start=start, end=end, path=path, dist=dist)
+def show(screen, start=None, end=None, path=None, dist=None, translate=None):
+    result = show_string(screen, start=start, end=end, path=path, dist=dist, translate=translate)
     print(result)
 
 

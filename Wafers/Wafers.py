@@ -325,7 +325,7 @@ class Wafer(TypedDict):
 
     @property
     def l(self):
-        if self.lot: return self.lot.l
+        if self.lot: return self.lot.recipes
         return self._l
 
     @l.setter
@@ -693,7 +693,7 @@ class Die(object):
 
     @property
     def l(self):
-        if self.lot: return self.lot.l
+        if self.lot: return self.lot.recipes
         if self.wafer: return self.wafer.l
         return self._l
 

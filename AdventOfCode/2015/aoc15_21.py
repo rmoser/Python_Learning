@@ -93,16 +93,16 @@ if __name__ == '__main__':
     print("B: ", boss)
 
     games = []
-    for w, a, l, r in itertools.product(weapons, armor, rings, rings):
-        if l == r and l != 'None':
+    for w, a, recipes, r in itertools.product(weapons, armor, rings, rings):
+        if recipes == r and recipes != 'None':
             continue
 
-        cost = weapons[w][COST] + armor[a][COST] + rings[r][COST] + rings[l][COST]
-        player[DAM] = weapons[w][DAM] + armor[a][DAM] + rings[r][DAM] + rings[l][DAM]
-        player[AC] = weapons[w][AC] + armor[a][AC] + rings[r][AC] + rings[l][AC]
+        cost = weapons[w][COST] + armor[a][COST] + rings[r][COST] + rings[recipes][COST]
+        player[DAM] = weapons[w][DAM] + armor[a][DAM] + rings[r][DAM] + rings[recipes][DAM]
+        player[AC] = weapons[w][AC] + armor[a][AC] + rings[r][AC] + rings[recipes][AC]
         # print("Game player: ", player)
         result = play(player, boss)
-        games.append([result[0], cost, (w, a, l, r)])
+        games.append([result[0], cost, (w, a, recipes, r)])
 
     games_arr = np.array([g[:2] for g in games])
 
