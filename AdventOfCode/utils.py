@@ -5,7 +5,9 @@ import aocd
 import math
 import itertools
 import scipy as sp
+from functools import lru_cache
 from scipy import ndimage
+from scipy.stats import false_discovery_control
 
 
 def text_format(text, foreground=None, background=None, style=None):
@@ -166,6 +168,34 @@ def valid_path(maze, start, end, paths=None, iters=-1, debug=False):
 
 def areas(maze):
     return ndimage.label(maze < 1)
+
+
+@lru_cache
+def factor(n):
+    d = {}
+    if n < 2:
+        return d
+    if n < 4:
+        d[n] = 1
+        return d
+
+    for i in range(2, int(n**0.5)+1):
+        r = 0
+        while r == 0:
+            q, r = divmod(n, i)
+            if r == 0:
+                d[i] = d.get(i, 0) + 1
+                n //= i
+    if n > 1:
+        d[n] = 1
+    return d
+
+
+@lru_cache
+def is_prime(n):
+    if n < 2:
+        return False
+    return max(factor(n).values()) == 1
 
 
 if __name__ == '__main__':
