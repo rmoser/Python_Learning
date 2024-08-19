@@ -4,6 +4,8 @@ day = 0
 
 import numpy as np
 import aocd
+import os
+os.environ["AOC_SESSION"] = "53616c7465645f5ffc80017c3c8c930fbc4880b09a0cbad8a01217c74864308b01c260ef4e14a659e630448499f917ddbd11b3c5b308647c43be75ef54a40d08"
 
 text0 = """
 """

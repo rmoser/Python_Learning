@@ -1,8 +1,9 @@
 # Advent of Code
 year = 2023
-day = 0
+day = 3
 
 import numpy as np
+import scipy as sp
 import aocd
 
 text0 = """
@@ -26,14 +27,18 @@ if __name__ == '__main__':
     text = text0
     text = text.strip().splitlines()
 
-    arr = np.array([[c for c in line] for line in text])
-    symbols = np.bitwise_not(np.isin(arr, list('0123456789.')))
-    _s = np.where(symbols)
-    s = np.array(list(zip(*_s)))
-    _a = np.where(np.char.isdigit(arr))
-    a = np.array(list(zip(*_a)))
+    arr = np.array([list(x) for x in text])
+    symbols = np.where(np.bitwise_not(np.isin(arr, list('0123456789.'))))  # Symbol positions
+    nums = np.where(np.chararray.isnumeric(arr))
+    nums_c = np.matrix(nums).T
+    arr[nums_c[0]]
+    d_x = np.abs(nums[0] - symbols[0][:,None]) <= 1
+    d_y = np.abs(nums[1] - symbols[1][:,None]) <= 1
+    d_xy = np.bitwise_and(d_x, d_y).any(axis=0)
+    n = 0
+    s1, s2 = 0, 0
+    for x, y in zip(*nums):
 
-    d = lambda x: np.abs(x-s).max(axis=1).min()
 
 
     print(f"AOC {year} day {day}  Part One: {pone}")
