@@ -1,4 +1,5 @@
 #  Utility Functions to reuse
+from __future__ import annotations
 
 import numpy as np
 import aocd
@@ -8,6 +9,7 @@ import scipy as sp
 from functools import lru_cache
 from scipy import ndimage
 from scipy.stats import false_discovery_control
+import pprint
 
 
 def text_format(text, foreground=None, background=None, style=None):
@@ -173,18 +175,20 @@ def areas(maze):
 @lru_cache
 def factor(n):
     d = {}
-    if n < 2:
-        return d
+    if n == 0:
+        return {0: 1}
+    if n == 1:
+        return {1: 1}
     if n < 4:
         d[n] = 1
         return d
 
-    for i in range(2, int(n**0.5)+1):
+    for i in np.arange(2, int(n**0.5)+1, dtype=np.int64):
         r = 0
         while r == 0:
             q, r = divmod(n, i)
             if r == 0:
-                d[i] = d.get(i, 0) + 1
+                d[i] = d.get(i, np.int64(0)) + 1
                 n //= i
     if n > 1:
         d[n] = 1
@@ -196,6 +200,69 @@ def is_prime(n):
     if n < 2:
         return False
     return max(factor(n).values()) == 1
+
+
+class BigInt():
+    def __init__(self, value : (int, np.int32, np.int64, BigInt)):
+        if isinstance(value, BigInt):
+            self.value = value.value.copy()
+        else:
+            self.value = factor(value)
+        self.__repr = np.int64(0)
+        self.update()
+
+    def clean(self):
+        for k, v in self.value.items():
+            if v == 0:
+                self.value.pop(k)
+
+    def update(self):
+        self.clean()
+        self.__repr = np.power(list(self.value.keys()), list(self.value.values())).prod()
+
+    def __repr__(self) -> str:
+        return str(self.__repr)
+
+    def __str__(self) -> str:
+        return pprint.pformat(self.value)
+
+    def __copy__(self):
+        return BigInt(self)
+
+    def __int__(self) -> int:
+        return int(self.__repr)
+
+    def __int64__(self) -> np.int64:
+        return self.__repr
+
+    def __add__(self, other):
+        return BigInt(self.__repr + np.int64(other))
+
+    def __mul__(self, other : (int, np.int32, np.int64, BigInt)):
+        if isinstance(other, BigInt):
+            _value = other.value
+        else:
+            _value = factor(other)
+
+        _new = self.__copy__()
+        for k, v in _value.items():
+            _new.value[k] = _new.value.get(k, np.int64(0)) + v
+
+        _new.update()
+        return _new
+
+    def __floordiv__(self, other):
+        if isinstance(other, BigInt):
+            _value = other.value
+        else:
+            _value = factor(other)
+
+        _new = self.__copy__()
+        for k, v in _value.items():
+            _new.value[k] = _new.value.get(k, np.int64(0)) - v
+
+        _new.update()
+        return _new
 
 
 if __name__ == '__main__':
@@ -217,4 +284,9 @@ if __name__ == '__main__':
         path.append(p)
 
     show(maze, start, end, path)
+
+
+    a = BigInt(64)
+    b = a + 5
+    c = a * b
 
