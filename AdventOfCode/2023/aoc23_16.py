@@ -22,26 +22,14 @@ text0 = r"""
 """
 text1 = aocd.get_data(day=day, year=year)
 
-if __name__ == '__main__':
-    pone = ''
-    ptwo = ''
-
-    text = text1
-    text = [list(c) for c in text.strip().splitlines()]
-    arr = np.array(text)
-
+def score(pos, direction, arr):
     dirs = np.array([[0, 1], [1, 0], [0, -1], [-1, 0]])
-    beams = [[(0, 0), 0]]
-    direction = 0
+    beams = [[pos, direction]]
     energized = set()
 
     history = np.zeros(arr.shape + (4, ), dtype=bool)
 
-    counter = 0
     while(beams):
-        # counter += 1
-        # if counter == 1000:
-        #     break
 
         pos, direction = beams.pop(0)
         energized.add(pos)
@@ -77,7 +65,45 @@ if __name__ == '__main__':
 
         # print(len(beams))
 
-    pone = len(energized)
+    return len(energized)
+
+
+if __name__ == '__main__':
+    pone = ''
+    ptwo = ''
+
+    text = text1
+    text = [list(c) for c in text.strip().splitlines()]
+    arr = np.array(text)
+    pos = (0, 0)
+    direction = 0
+
+    pone = score((0,0), 0, arr)
+
+    scores = np.ones(shape=arr.shape, dtype=int)
+    scores[0, :] = 0
+    scores[-1, :] = 0
+    scores[:, 0] = 0
+    scores[:, -1] = 0
+
+    for p in zip(*np.where(scores == 0)):
+        pos = tuple(p)
+
+        dirs = []
+        if pos[0] == 0:
+            dirs.append(1)
+        elif pos[0] == arr.shape[0]-1:
+            dirs.append(3)
+
+        if pos[1] == 0:
+            dirs.append(0)
+        elif pos[1] == arr.shape[1]-1:
+            dirs.append(2)
+
+        for d in dirs:
+            scores[pos] = max(scores[pos], score(pos, d, arr))
+
+    ptwo = scores.max()
 
     print(f"AOC {year} day {day}  Part One: {pone}")
 
