@@ -73,11 +73,14 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
         translate = {ord('1'): ord('#'), ord('0'): ord('·')}
 
     # Convert to str array
-    arr = screen.astype(int).astype(str)
+    if np.issubdtype(screen.dtype, int):
+        arr = screen.astype(int).astype(str)
 
-    # Translation from int values to characters
-    if translate:
-        arr = np.char.translate(arr, translate)
+        # Translation from int values to characters
+        if translate:
+            arr = np.char.translate(arr, translate)
+    else:
+        arr = screen.copy()
 
     start = {tuple(start)} if start else set()
     end = {tuple(end)} if end else set()
