@@ -53,7 +53,7 @@ if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    text = text0
+    text = text1
     text = [int(x) for x in text.strip().splitlines()]
 
     max_n = len(text)
@@ -78,8 +78,7 @@ if __name__ == '__main__':
 
     sequences = dict()
     for i in range(arr_delta_window.shape[1]):
-        for r in arr_delta_window[:,i,:]:
-            s = tuple(r.tolist())
+        for s in set(tuple(x.tolist()) for x in arr_delta_window[:,i,:]):
             sequences[s] = sequences.get(s, 0) + 1
 
     sequences_ordered = dict()
@@ -88,14 +87,6 @@ if __name__ == '__main__':
             sequences_ordered[v] = list()
         sequences_ordered[v].append(s)
 
-    # Find sequences that exist in all columns
-    # matching_sequences_list = []
-    # matching_sequences_set = set()
-    # for c in range(_arr.shape[1]):
-    #     x = list(zip(arr_delta[:-3, c].tolist(), arr_delta[1:-2, c].tolist(), arr_delta[2:-1, c].tolist(), arr_delta[3:, c].tolist()))
-    #     matching_sequences_list.append(x)
-    #     matching_sequences_set |= set(x)
-
     scores = dict()
     i = 0
     max_score = 0
@@ -103,16 +94,18 @@ if __name__ == '__main__':
         if n not in sequences_ordered:
             continue
         if max_score >= 9 * n:
+            print(f'\nMax score found.  Ending search...')
             break
         for s in sequences_ordered[n]:
             i += 1
             print(f'\r{n}: {i}/{len(sequences)}  max: {max_score}/{9*n}', end='\t\t\t\t\t\t\t')
-            for col in range(arr_delta.shape[1]):
-                m = match(s, arr_delta[:, col]) + 4
-                if len(m):
-                    # print(i, s, col, m, _arr[:, col][m])
-                    scores[s] = scores.get(s, 0) + _arr[:, col][m.min()]
-                    max_score = max(scores.values())
+
+            m = (arr_delta_window == s).all(axis=2)
+            rows = np.argmax(m, axis=0) + 4
+            anys = np.any(m, axis=0)
+            scores[s] = (_arr[rows, np.arange(_arr.shape[1])] * anys).sum()
+            max_score = max(max_score, scores[s])
+
     print()
 
     ptwo = max(scores.values())
