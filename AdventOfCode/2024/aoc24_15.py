@@ -38,33 +38,31 @@ DIRS = {
     '^': np.array([-1, 0]),
     '>': np.array([0, 1]),
     '<': np.array([0, -1]),
-    'v': np.array([1, 0])
+    'v': np.array([1, 0]),
 }
 
-def move(pos, arr, direction):
-    d = DIRS[direction]
-    new_pos = tuple(pos + d)
+def move(pos, array, direction):
+    # pos must be indexable into array
+    # either simple tuple (row, column)
+    # or tuple of matched (rows, columns)
 
-    # new pos is empty
-    if array[new_pos] == '.':
-        array[pos] = '.'
-        array[new_pos] = '@'
-        return new_pos
+    d = DIRS[direction]
+    new_pos = tuple(np.array(pos).T + d)
 
     # new pos is box:
-    if array[new_pos] == 'O':
-        new_pos2 = new_pos
-        i = 1
-        while array[new_pos2] == 'O':
-            i += 1
-            new_pos2 = tuple(new_pos2 + d)
+    if np.array(array[new_pos] == 'O').all():
+        # try to move the object out of the way
+        move(new_pos, array, direction)
 
-        # Space to move box:
-        if array[new_pos2] == '.':
-            array[new_pos2] = 'O'
-            array[new_pos] = '@'
-            array[pos] = '.'
-            return new_pos
+    # now check if the move call made space
+    # new pos is empty
+    if np.array(array[new_pos] == '.').all():
+        array[new_pos] = array[pos]
+        array[pos] = '.'
+        return new_pos
+
+    # if array[new_pos] in ('[', ']'):
+    #     new_pos2 = new_pos
 
     return pos
 
@@ -73,21 +71,46 @@ if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    text = text1
+    text = text0
     text = text.strip()
 
     a, b = text.split('\n\n')
     array = np.array([list(x) for x in a.splitlines()])
+    array2 = np.zeros(shape=(array.shape * np.array([1, 2])), dtype=str)
+
+    col = np.zeros(shape=(array.shape[0], 2), dtype=str)
+    for c in range(array.shape[1]):
+        # Copy to both columns
+        col[:, 0] = array[:, c]
+        col[:, 1] = array[:, c]
+
+        # Parse objects and player
+        col[col[:, 0] == 'O', 0] = '['
+        col[col[:, 1] == 'O', 1] = ']'
+        col[col[:, 1] == '@', 1] = '.'
+
+        array2[:, c*2:c*2+2] = col
 
     instructions = ''.join(list(b.splitlines()))
 
     pos = tuple(np.array(np.where(array == '@')).flatten().tolist())
+    pos2 = tuple(np.array(np.where(array2 == '@')).flatten().tolist())
+
+    debug = False
+    if debug:
+        utils.show(array2, translate=False, start=pos2)
 
     for i in list(instructions):
         pos = move(pos, array, i)
+        pos2 = move(pos2, array2, i)
+
+        if debug:
+            print(i)
+            utils.show(array2, translate=False, start=pos2)
 
 
-    utils.show(array, translate=False)
+    # utils.show(array, translate=False)
+    utils.show(array2, translate=False, start=pos2)
 
     pone = (np.array(np.where(array == 'O')) * [[100], [1]]).sum()
 
