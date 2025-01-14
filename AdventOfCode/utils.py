@@ -73,7 +73,7 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
         translate = {ord('1'): ord('#'), ord('0'): ord('·')}
 
     # Convert to str array
-    if np.issubdtype(screen.dtype, int):
+    if np.issubdtype(screen.dtype, np.integer):
         arr = screen.astype(int).astype(str)
 
         # Translation from int values to characters
@@ -82,8 +82,20 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
     else:
         arr = screen.copy()
 
-    start = {tuple(start)} if start else set()
-    end = {tuple(end)} if end else set()
+    if not start:
+        start = set()
+    elif isinstance(start[0], tuple):
+        start = set([tuple(p) for p in start])
+    else:
+        start = {tuple(start)}
+
+    if not end:
+        end = set()
+    elif isinstance(end[0], tuple):
+        end = set([tuple(p) for p in end])
+    else:
+        end = {tuple(end)}
+
     path = set([tuple(p) for p in path]) - start - end if path else set()
 
     for p in start | end | path:
@@ -140,6 +152,9 @@ def valid_path(maze, start, end, paths=None, iters=-1, debug=False):
     pos_dist = {start: 0}
 
     max_moves = np.prod(maze.shape)
+
+    result_paths = []
+
     while True:
         for _ in range(len(paths)):
             path = paths.pop(0)
@@ -148,14 +163,14 @@ def valid_path(maze, start, end, paths=None, iters=-1, debug=False):
 
             pos = path[-1]
             for move in moves:
-                new_pos = pos + move
+                new_pos = pos + move  # type is np.array
                 new_pos_tuple = tuple(new_pos)
+                if (new_pos < 0).any() or (new_pos >= maze.shape).any():
+                    continue
                 if (new_pos == end).all():
                     pos_dist[new_pos_tuple] = len(path)  # len(path) includes the start point already, so no need to increment for the end point
-                    return path + [new_pos_tuple]
+                    return path + [new_pos_tuple], pos_dist
                 if new_pos_tuple in pos_dist:  # Shorter path to this point already exists
-                    continue
-                if (new_pos < 0).any() or (new_pos >= maze.shape).any():
                     continue
                 if maze[new_pos_tuple] == 0:
                     paths.append(path + [new_pos_tuple])
@@ -173,6 +188,11 @@ def valid_path(maze, start, end, paths=None, iters=-1, debug=False):
 
 def areas(maze):
     return ndimage.label(maze < 1)
+
+
+def in_array(pos, arr):
+    p = np.array(pos)
+    return (p >= 0).all() and (p < arr.shape).all()
 
 
 @lru_cache

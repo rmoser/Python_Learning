@@ -96,17 +96,17 @@ class Node(object):
     @classmethod
     def trace_gate(cls, num: int):
         result = dict()
-        errors = []
         _num = f'{num:0>2}'
         _x0 = f'x{_num}'
         _y0 = f'y{_num}'
         _z0 = f'z{_num}'
         _c0 = f'c{_num}'
+        _c_1 = f'c{num-1:0>2}'
         # _z1 = f'z{num+1:0>2}'
 
         for c in (_z0, _y0, _x0):
             n = Node.nodes[c]
-            result[c] = n
+            result[c.upper()] = n
 
         # Logic gates
         # x0 XOR y0 -> a
@@ -115,11 +115,13 @@ class Node(object):
         # c0 AND a -> d
         # d OR b -> c1
 
-        a, d, b, cin, cout = None, None, None, None, None
+        seen_nodes = set(result.values())
+        a, d, b, cin, cout, z0 = None, None, None, None, None, None
 
         if num == 0:
             for _node in n.outputs:
                 _node = cls.as_node(_node)
+                seen_nodes.add(_node)
                 if _node.inputs == {_x0, _y0}:
                     if _node.op == 'AND':
                         cout = _node
@@ -128,11 +130,13 @@ class Node(object):
                     elif _node.op == 'XOR':
                         z0 = _node
                         _node.label = _z0
-
+                    else:
+                        seen_nodes.add(_node)
 
         else:
             for _node in n.outputs:
                 _node = cls.as_node(_node)
+                seen_nodes.add(_node)
                 if _node.inputs == {_x0, _y0}:
                     if _node.op == 'AND':
                         b = _node
@@ -141,68 +145,88 @@ class Node(object):
                     elif _node.op == 'XOR':
                         a = _node
                         _node.label = f'a{_num}'
-            if not a:
-                errors.append(['Missing A'])
-            if not b:
-                errors.append(['Missing B'])
 
-            for _node in a.outputs:
+            for _node in a.outputs if a else set():
                 _node = cls.as_node(_node)
+                seen_nodes.add(_node)
                 if _node.op == 'XOR':
                     z0 = _node
                     _node.label = _z0
-                elif _node.op == 'AND':
+
+            if not z0 and Node.nodes[_z0].op == 'XOR':
+                z0 = Node.nodes[_z0]
+                seen_nodes.add(z0)
+                z0.label = _z0
+
+            for _node in (a.outputs if a else set()):
+                _node = cls.as_node(_node)
+                seen_nodes.add(_node)
+                if _node.op == 'AND':
                     d = _node
                     _node.label = f'd{_num}'
 
-            for _node in b.outputs:
+            for _node in cls.nodes.values():
+                if _node.label == _c_1:
+                    cin = _node
+                    seen_nodes.add(cin)
+
+            if not cin:
+                for _node in (z0.inputs if z0 else set() | (d.inputs if d else set())):
+                    if _node != a.name:
+                        cin = cls.as_node(_node)
+                        seen_nodes.add(cin)
+
+            for _node in (b.outputs if b else set()) | (d.outputs if d else set()):
                 _node = cls.as_node(_node)
+                seen_nodes.add(_node)
                 if _node.op == 'OR':
                     cout = _node
                     _node.label = f'c{_num}'
-
-            for n in z0.inputs:
-                if n != a.name:
-                    cin = cls.as_node(n)
-
-            if not d:
-                errors.append(['Missing D'])
-
-        if not z0:
-            errors.append([f'Missing {_z0}'])
-        if not cout:
-            errors.append([f'Missing {_c0}'])
 
         result['a'] = a
         result['b'] = b
         result['d'] = d
         result['cin'] = cin
         result['cout'] = cout
+        result[_z0] = z0
+        result['unk'] = {n for n in seen_nodes if not n.label}
 
         # Check wiring for errors
+        _errors = []
         if num:
-            if a.inputs != {_x0, _y0} or a.op != 'XOR':
-                errors.append(['a', a])
-            if b.inputs != {_x0, _y0} or b.op != 'AND':
-                errors.append(['b', b])
-            if d.inputs != {a.name, cin.name}:
-                errors.append(['d', d])
-            if cin.outputs != {z0.name, d.name}:
-                errors.append(['c0', cin])
-            if cout.inputs != {d.name, b.name}:
-                errors.append(['c1', cout])
+            if not a or a.inputs != {_x0, _y0} or a.op != 'XOR' or len(a.outputs) != 2:
+                if a:
+                    _errors.append(a.name)
+            if not b or b.inputs != {_x0, _y0} or b.op != 'AND' or len(b.outputs) != 1:
+                if b:
+                    _errors.append(b.name)
+            if not d or d.inputs != {a.name, cin.name} or d.op != 'AND' or len(d.outputs) != 1:
+                if d:
+                    _errors.append(d.name)
+            if not cin or cin.op != ('OR' if num > 1 else 'AND') or len(cin.outputs) != 2:
+                if cin:
+                    _errors.append(cin.name)
+            if not cout or cout.op != 'OR' or len(cout.inputs) != 2:
+                if cout:
+                    _errors.append(cout.name)
+            if not z0 or z0.name != _z0 or z0.op != 'XOR' or len(z0.inputs) != 2 or len(z0.outputs) != 0:
+                if z0 and z0.name not in _errors:
+                    _errors.append(z0.name)
+                if _z0 not in _errors:
+                    _errors.append(_z0)
         else:
-            if z0.inputs != {_x0, _y0}:
-                errors.append([_z0])
-            if cout.inputs != {_x0, _y0}:
-                errors.append([_c0, cout])
+            if not z0 or z0.inputs != {_x0, _y0} or z0.op != 'XOR':
+                _errors.append(z0.name if z0 else _z0)
+            if not cout or cout.inputs != {_x0, _y0} or cout.op != 'AND':
+                _errors.append(cout.name if cout else _c0)
 
-        if z0.name != _z0:
-            errors.append([_z0, z0.name])
-        if Node.as_node(_x0).outputs != Node.as_node(_y0).outputs:
-            errors.append([_x0, "outputs !=", _y0])
+        # if Node.as_node(_x0).outputs != Node.as_node(_y0).outputs:
+        #     _errors.append([_x0, "outputs !=", _y0])
 
-        return errors, result
+        _suspect_nodes = {n.name for n in seen_nodes if not n.label and n.op}
+        if _suspect_nodes and len(_suspect_nodes) % 2 == 0:
+            _errors += list(_suspect_nodes)
+        return _errors, result
 
     @classmethod
     def traceforward(cls, node):
@@ -259,8 +283,8 @@ class Node(object):
 
     def __repr__(self):
         if len(self.inputs) == 2:
-            return f'Node {self.name}/{self.label}: {f" {self.op} ".join(self.inputs)} = {self.output}.'
-        return f'Node {self.name}: {self.output}'
+            return f'Node {self.name}/{self.label}: {f" {self.op} ".join(self.inputs)} = {self.output} -> {self.outputs}.'
+        return f'Node {self.name}: {self.output} -> {self.outputs}.'
 
     def __str__(self):
         return f'Node {self.name}'
@@ -318,25 +342,20 @@ class Node(object):
 
         self.inputs, other.inputs = other.inputs, self.inputs
         self.op, other.op = other.op, self.op
+        self.label, other.label = other.label, self.label
 
         for node in self.inputs | other.inputs:
             node = self.as_node(node)
-            if self.name in node.outputs and other.name not in node.outputs:
-                node.outputs = node.outputs - {self.name} | {other.name}
-            elif self.name not in node.outputs and other.name in node.outputs:
-                node.outputs = node.outputs - {other.name} | {self.name}
+            node.outputs = {k for k, v in Node.nodes.items() if node.name in v.inputs}
 
-        for node in self.outputs | other.outputs:
-            node = self.as_node(node)
-            if self.name in node.inputs and other.name not in node.inputs:
-                node.inputs = node.inputs - {self.name} | {other.name}
-            elif self.name not in node.inputs and other.name in node.inputs:
-                node.inputs = node.inputs - {other.name} | {self.name}
+        self.outputs = {k for k, v in Node.nodes.items() if self.name in v.inputs}
+        other.outputs = {k for k, v in Node.nodes.items() if other.name in v.inputs}
 
         self.calc()
         other.calc()
-        for x in self.outputs | other.outputs:
-            self.nodes[x].calc()
+        self.nodes['x00'].recalc_outputs()
+        # self.recalc_outputs()
+        # other.recalc_outputs()
 
     def get_op(self, op, forward=True):
         result = []
@@ -388,6 +407,9 @@ def check():
     bad_outputs = np.where(np.array(list(reversed(delta)), dtype=int))[0]
     bad_output_names = [x for x in [f'z{i:0>2}' for i in bad_outputs] if x in Node.nodes and x[0] not in ('x', 'y')]
 
+    print(f'{x1} + {y1} = {x1+y1}')
+    print(f'Adder result: {z1}')
+
     if not bad_output_names:
         return True, []
     else:
@@ -414,8 +436,8 @@ if __name__ == '__main__':
             b, a = line.split(' -> ')
             for x in errors:
                 if a in x:
-                    i = x.index(a)
-                    a = x[1-i]
+                    num = x.index(a)
+                    a = x[1 - num]
                 break
 
         nodes.append(Node(a, b))
@@ -425,15 +447,18 @@ if __name__ == '__main__':
 
     pone = Node.output_value('z')
 
-    for i in range(sum(1 for x in Node.nodes.keys() if x.startswith('x'))):
-        e, r = Node.trace_gate(i)
+    traces = dict()
+    for num in range(sum(1 for x in Node.nodes.keys() if x.startswith('x'))):
+        e, r = Node.trace_gate(num)
+        traces[num] = r
         if e:
-            break
+            while len(e) and (len(e) % 2) == 0:
+                e = tuple(e)
+                Node.nodes[e[0]].rewire(e[1])
+                errors.append(e[:2])
+                e, r = Node.trace_gate(num)
 
-    print(i)
-    pprint(e)
-    pprint(r)
-
+    ptwo = ','.join(sorted(it.chain(*errors)))
     # suspect_nodes = list(it.chain(*[Node.connected(x) for x in bad_output_names]))
 
     # Node.nodes['z05'].rewire('z00')
