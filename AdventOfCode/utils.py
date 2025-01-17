@@ -11,6 +11,7 @@ from scipy import ndimage
 from scipy.stats import false_discovery_control
 import pprint
 
+DEFAULT_TRANSLATE = {ord('1'): ord('#'), ord('0'): ord('·')}
 
 def text_format(text, foreground=None, background=None, style=None):
     colors = {
@@ -70,7 +71,7 @@ def text_format(text, foreground=None, background=None, style=None):
 def show_string(screen, start=None, end=None, path=None, dist=None, translate=None):
     if translate is None:
         # zeros to centered dot (·), ones to hash (#).
-        translate = {ord('1'): ord('#'), ord('0'): ord('·')}
+        translate = DEFAULT_TRANSLATE
 
     # Convert to str array
     if np.issubdtype(screen.dtype, np.integer):
@@ -126,8 +127,17 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
 
 
 def show(screen, start=None, end=None, path=None, dist=None, translate=None):
-    result = show_string(screen, start=start, end=end, path=path, dist=dist, translate=translate)
-    print(result)
+    if np.ndim(screen) <= 2:
+        result = show_string(screen, start=start, end=end, path=path, dist=dist, translate=translate)
+        print(result)
+        return
+
+    if screen.ndim == 3:
+        for s in screen:
+            print(show_string(s, start=start, end=end, path=path, dist=dist, translate=translate))
+        return
+
+    raise IndexError(f"Too many dimensions: {screen.ndim} > 3.")
 
 
 def map_from_text(text):
