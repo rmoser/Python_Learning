@@ -1,4 +1,6 @@
 # Advent of Code
+from wsgiref.validate import header_re
+
 year = 2020
 day = 23
 
@@ -16,7 +18,106 @@ os.environ["AOC_SESSION"] = "53616c7465645f5f7538531ba6a69f289dbd96f1fdc096ca925
 text0 = """389125467"""
 text1 = aocd.get_data(day=day, year=year)
 
-DEBUG = True
+DEBUG = False
+
+class LinkedList3:
+    def __init__(self):
+        self.array = np.zeros(shape=1000001, dtype=int)
+
+    def __repr__(self):
+        i = self.head
+        s = f'({i})'
+        for _ in range(15):
+            i = self.array[i]
+            if i == self.head:
+                break
+            s += f' {i} '
+        return s
+
+    def __iter__(self):
+        node = self.head
+        while True:
+            yield node
+            node = self.array[node]
+            if node == self.head:
+                break
+
+    @property
+    def head(self):
+        return self.array[0]
+
+    @head.setter
+    def head(self, item):
+        self.array[0] = item
+
+    @property
+    def tail(self):
+        return np.argwhere(cups.array == self.head).max()
+
+    @tail.setter
+    def tail(self, val):
+        self.array[self.tail] = val
+
+    def add(self, val):
+        if self.head == 0:
+            self.head = val
+            self.array[val] = val
+            return
+
+        self.array[self.tail] = val
+        self.array[val] = self.head
+
+
+    def add_many(self, items):
+        for item in items:
+            self.add(item)
+
+    def fill(self, end):
+        node = self.tail
+        for i in range(self.array.max()+1, end+1):
+            self.array[node] = i
+            node = i
+            if node == end:
+                self.array[node] = self.head
+
+
+    def rot(self):
+        self.array[0] = self.array[self.head()]
+
+    def move_3(self):
+        s_head = self.array[self.head]
+        s_mid = self.array[s_head]
+        s_tail = self.array[s_mid]
+        self.array[self.head] = self.array[s_tail]  # Cut out the three values
+
+        cut_values = (s_head, s_mid, s_tail)
+
+        # Move three items in LL to after the node with data 'other'
+        # Then change head to the next node
+
+        # Find where to insert node (1 less than prev selected value, unless it was in the cut section
+
+        # print(cut_values)
+        hi = self.array.max()
+        lo = 1
+        o = self.head
+        while True:
+            o -= 1
+            if o < lo:
+                o = hi
+            if o not in cut_values:
+                break
+
+        other = self.array[o]  # Where to insert 3 cut nodes
+
+        ### Insert 3 nodes after other
+        # Sub list next and prev
+        self.array[o] = s_head
+        self.array[s_tail] = other
+        self.head = self.array[self.head]
+
+        return cut_values, o
+
 
 class Node2:
     def __init__(self, data, parent=None, next=None, prev=None):
@@ -323,7 +424,7 @@ class LinkedList:
             node = node.next
 
 def run(cup_list, moves):
-    if isinstance(cup_list, (LinkedList, LinkedList2)):
+    if isinstance(cup_list, (LinkedList, LinkedList2, LinkedList3)):
         cups = cup_list
     else:
         cups = LinkedList()
@@ -359,10 +460,9 @@ if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    text = text0
+    text = text1
     text = text.strip().splitlines()
     _cups = [int(c) for c in text[0]]
-    print(_cups)
 
     if False:
         cups = LinkedList()
@@ -370,6 +470,8 @@ if __name__ == '__main__':
         self = cups
 
     else:
+        cups = LinkedList3()
+        cups.add_many(_cups)
         cups = run(_cups, 100)
 
         while int(cups.head) != 1:
@@ -378,18 +480,18 @@ if __name__ == '__main__':
         pone = ''.join(str(x) for x in list(cups)[1:])
         print(f"AOC {year} day {day}  Part One: {pone}")
 
-        if True:
-            cups = LinkedList()
-            cups.add_many(_cups)
-            cups.add_many(range(max(cups)+1, 1000001))
-            print(str(cups.get(100)))
-            run(cups, 10000000)
+        cups = LinkedList3()
+        cups.add_many(_cups)
+        cups.fill(1000000)
+        run(cups, 10000000)
 
         # cups = run(_cups + list(range(10, 1000000)), 10000000)
-        c = cups.find(1)
-        if c.next is None or c.next.next is None:
-            cups.rot()
-            cups.rot()
+        # c = cups.find(1)
+        # if c.next is None or c.next.next is None:
+        #     cups.rot()
+        #     cups.rot()
 
-        ptwo = int(c.next) * int(c.next.next)
+        i1 = cups.array[1]
+
+        ptwo = i1 * cups.array[i1]
         print(f"AOC {year} day {day}  Part Two: {ptwo}")
