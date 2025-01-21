@@ -21,14 +21,14 @@ if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    debug = False
+    DEBUG = False
 
     text = text1
     text = text.strip().splitlines()
 
     for line in text:
         count = parse(line)
-        if debug:
+        if DEBUG:
             print(line, count)
 
     pone = count
@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     for line in text:
         count = parse(line, n=len(line)//2)
-        if debug:
+        if DEBUG:
             print(line, count)
 
     ptwo = count

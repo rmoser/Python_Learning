@@ -8,7 +8,7 @@ import aocd
 text0 = """s1,x3/4,pe/b"""
 text1 = aocd.get_data(day=day, year=year)
 
-debug = False
+DEBUG = False
 
 
 def spin(s, i):
@@ -63,7 +63,7 @@ def dance(s, steps):
         s = np.vectorize(ord)(s)
         s -= s.min()
     for line in steps.split(','):
-        if debug:
+        if DEBUG:
             print(show(s))
         inst, val = line[0], line[1:]
         val = val.split('/')
@@ -77,7 +77,7 @@ def dance(s, steps):
             s = exchange(s, int(a), int(b))
         else:
             s = partner(s, a, b)
-    if debug:
+    if DEBUG:
         print(show(s))
     return s
 
