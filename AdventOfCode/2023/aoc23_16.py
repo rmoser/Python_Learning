@@ -89,18 +89,18 @@ if __name__ == '__main__':
     for p in zip(*np.where(scores == 0)):
         pos = tuple(p)
 
-        dirs = []
+        DIRS = []
         if pos[0] == 0:
-            dirs.append(1)
+            DIRS.append(1)
         elif pos[0] == arr.shape[0]-1:
-            dirs.append(3)
+            DIRS.append(3)
 
         if pos[1] == 0:
-            dirs.append(0)
+            DIRS.append(0)
         elif pos[1] == arr.shape[1]-1:
-            dirs.append(2)
+            DIRS.append(2)
 
-        for d in dirs:
+        for d in DIRS:
             scores[pos] = max(scores[pos], score(pos, d, arr))
 
     ptwo = scores.max()
