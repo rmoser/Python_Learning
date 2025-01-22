@@ -1,6 +1,4 @@
 # Advent of Code
-from wsgiref.validate import header_re
-
 year = 2020
 day = 23
 
@@ -52,7 +50,7 @@ class LinkedList3:
 
     @property
     def tail(self):
-        return np.argwhere(cups.array == self.head).max()
+        return np.argwhere(self.array == self.head).max()
 
     @tail.setter
     def tail(self, val):
@@ -82,7 +80,7 @@ class LinkedList3:
 
 
     def rot(self):
-        self.array[0] = self.array[self.head()]
+        self.array[0] = self.array[self.head]
 
     def move_3(self):
         s_head = self.array[self.head]
@@ -464,34 +462,28 @@ if __name__ == '__main__':
     text = text.strip().splitlines()
     _cups = [int(c) for c in text[0]]
 
-    if False:
-        cups = LinkedList()
-        cups.add_many(_cups)
-        self = cups
+    cups = LinkedList3()
+    cups.add_many(_cups)
+    cups = run(_cups, 100)
 
-    else:
-        cups = LinkedList3()
-        cups.add_many(_cups)
-        cups = run(_cups, 100)
+    while int(cups.head) != 1:
+        cups.rot()
 
-        while int(cups.head) != 1:
-            cups.rot()
+    pone = ''.join(str(x) for x in list(cups)[1:])
+    print(f"AOC {year} day {day}  Part One: {pone}")
 
-        pone = ''.join(str(x) for x in list(cups)[1:])
-        print(f"AOC {year} day {day}  Part One: {pone}")
+    cups = LinkedList3()
+    cups.add_many(_cups)
+    cups.fill(1000000)
+    run(cups, 10000000)
 
-        cups = LinkedList3()
-        cups.add_many(_cups)
-        cups.fill(1000000)
-        run(cups, 10000000)
+    # cups = run(_cups + list(range(10, 1000000)), 10000000)
+    # c = cups.find(1)
+    # if c.next is None or c.next.next is None:
+    #     cups.rot()
+    #     cups.rot()
 
-        # cups = run(_cups + list(range(10, 1000000)), 10000000)
-        # c = cups.find(1)
-        # if c.next is None or c.next.next is None:
-        #     cups.rot()
-        #     cups.rot()
+    i1 = cups.array[1]
 
-        i1 = cups.array[1]
-
-        ptwo = i1 * cups.array[i1]
-        print(f"AOC {year} day {day}  Part Two: {ptwo}")
+    ptwo = i1 * cups.array[i1]
+    print(f"AOC {year} day {day}  Part Two: {ptwo}")
