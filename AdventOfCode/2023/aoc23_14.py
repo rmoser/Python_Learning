@@ -26,10 +26,18 @@ translation = {ord('1'): ord('#'), ord('0'): ord('·'), ord('2'): ord('O')}
 
 
 def calc_load(arr):
-    return sum(arr.shape[0]-r for r in np.where(arr==2)[0])
+    return (arr.shape[0]-(np.where(arr==2)[0])).sum()
 
+def load_cycle(n, mem, start, loop, shape):
+    if n < start:
+        t = mem[n]
+    else:
+        t = mem[start + (n-start)%loop]
+    arr = np.array(t).reshape(shape)
+    return calc_load(arr)
 
 def north(arr):
+    arr = arr.copy()
     rocks = zip(*np.where(arr == 2))
 
     for r, c in rocks:
@@ -54,65 +62,52 @@ def mem_spin(t, shape):
 
 def spin(arr):
     # utils.show(arr, translate=translation)
-    _arr = north(arr.copy())
-    _arr = np.rot90(_arr, axes=(1, 0))
-    # utils.show(_arr, translate=translation)
-
-    # West
-    _arr = north(_arr)
-    _arr = np.rot90(_arr, axes=(1, 0))
-    # utils.show(_arr, translate=translation)
-
-    # South
-    _arr = north(_arr)
-    _arr = np.rot90(_arr, axes=(1, 0))
-    # utils.show(_arr, translate=translation)
-
-    # East
-    _arr = north(_arr)
-    _arr = np.rot90(_arr, axes=(1, 0))
-    # utils.show(_arr, translate=translation)
-
+    _arr = arr.copy()
+    for _ in range(4):
+        _arr = north(_arr)
+        _arr = np.rot90(_arr, -1)
     return _arr
 
+
+utils.DEFAULT_TRANSLATE[ord('2')] = 'O'
 
 if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    text = text0
+    text = text1
     text = np.array([list(x) for x in text.strip().splitlines()])
     arr = (text=='#') + (text=='O')*2
     arr = arr.astype(int)
     shape = arr.shape
 
-    # utils.show(arr, translate=translation)
-
-    rocks = zip(*np.where(arr == 2))
-
-    for r, c in rocks:
-        if not r:
-            continue
-
-        _r = r
-        while _r and arr[_r-1, c] == 0:
-            _r -= 1
-        if _r != r:
-            # print('\n', r, c)
-            arr[_r, c] = arr[r, c]
-            arr[r, c] = 0
-
-            # utils.show(arr, translate=translation)
-
-    pone = calc_load(arr)
+    n_arr = north(arr)
+    # utils.show(n_arr)
+    pone = calc_load(north(arr))
 
     print(f"AOC {year} day {day}  Part One: {pone}")
 
-    for i in range(1000000000):
-        _arr = mem_spin(tuple(arr.flatten()), shape)
-        arr = _arr
-        # if i < 1000 or not i % 1000:
-        print(i, end='\r')
+    mem = dict()
 
-    ptwo = calc_load(arr)
+    _arr = arr.copy()
+    threshold = 1000
+    for i in range(10**9):
+        # print(i, calc_load(_arr))
+        arg = tuple(_arr.flatten().tolist())
+
+        if arg in mem.values():
+            break
+
+        mem[i] = arg
+        _arr = mem_spin(arg, shape)
+
+        print(f'\r{i}...', end='\t\t\t\t')
+    print()
+
+    end_iter = i
+    start_iter = list(mem.values()).index(arg)
+    loop_len = end_iter - start_iter
+
+    ptwo = load_cycle(10**9, mem, start_iter, loop_len, shape)
+
     print(f"AOC {year} day {day}  Part Two: {ptwo}")
