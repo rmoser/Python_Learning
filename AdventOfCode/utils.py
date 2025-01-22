@@ -10,6 +10,10 @@ from functools import lru_cache
 from scipy import ndimage
 from scipy.stats import false_discovery_control
 import pprint
+import os
+
+# Set authentication cookie
+os.environ["AOC_SESSION"] = "53616c7465645f5f7538531ba6a69f289dbd96f1fdc096ca925f2ca6c250bf6987a1d4d1dedc3d335d639450a7bab765d33fc06d52ed3465933b76a92966b4e0"
 
 DEFAULT_TRANSLATE = {ord('1'): ord('#'), ord('0'): ord('·')}
 
@@ -232,7 +236,7 @@ def factor(n):
 def is_prime(n):
     if n < 2:
         return False
-    return max(factor(n).values()) == 1
+    return len(factor(n)) == 1
 
 
 class BigInt():
