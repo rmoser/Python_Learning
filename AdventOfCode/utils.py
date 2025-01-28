@@ -15,7 +15,7 @@ import os
 # Set authentication cookie
 os.environ["AOC_SESSION"] = "53616c7465645f5f7538531ba6a69f289dbd96f1fdc096ca925f2ca6c250bf6987a1d4d1dedc3d335d639450a7bab765d33fc06d52ed3465933b76a92966b4e0"
 
-DEFAULT_TRANSLATE = {ord('1'): ord('#'), ord('0'): ord('·')}
+DEFAULT_TRANSLATE = {ord('1'): '#', ord('0'): '·'}
 
 def text_format(text, foreground=None, background=None, style=None):
     colors = {
@@ -84,6 +84,7 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
         # Translation from int values to characters
         if translate:
             arr = np.char.translate(arr, translate)
+
     else:
         arr = screen.copy()
 
@@ -118,14 +119,19 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
             arr = arr.astype(dt)
         arr[p] = _c
 
+    pos_max_length = max(len(x) for x in arr.flatten())
+    if pos_max_length > 1:
+        pos_max_length += 1  # Add space between cols if data has multiple chars
+
     if dist:
         pad = max(len(str(k)) for k in dist)
 
     w = len(str(arr.shape[0]))
-    result = f"{' ' * w} {''.join(str(s % 10) for s in range(screen.shape[1]))}"
+    result = f"{' ' * w} {''.join(f'{str(s % 10 ** pos_max_length):>{pos_max_length}}' for s in range(arr.shape[1]))}"
     for r in range(arr.shape[0]):
         # print(f"{r}", ''.join(screen[r].astype(str)).replace('0', '\u25AF').replace('1', '\u25AE'))
-        result += f"\n{str(r).rjust(w)} {''.join(arr[r])}"
+        # result += f"\n{str(r).rjust(w)} {''.join(arr[r])}"
+        result += f"\n{str(r).rjust(w)} {''.join(f'{c:>{pos_max_length}}' for c in arr[r])}"
 
     return result
 
