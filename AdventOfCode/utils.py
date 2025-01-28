@@ -104,6 +104,10 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
 
     path = set([tuple(p) for p in path]) - start - end if path else set()
 
+    pos_max_length = max(len(x) for x in arr.flatten())
+    if pos_max_length > 1:
+        pos_max_length += 1  # Add space between cols if data has multiple chars
+
     for p in start | end | path:
         c = arr[p]
         if p in start:
@@ -118,10 +122,6 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
             dt = np.dtype(('U', len(_c)))  # Guess at how much larger it needs to be
             arr = arr.astype(dt)
         arr[p] = _c
-
-    pos_max_length = max(len(x) for x in arr.flatten())
-    if pos_max_length > 1:
-        pos_max_length += 1  # Add space between cols if data has multiple chars
 
     if dist:
         pad = max(len(str(k)) for k in dist)
