@@ -109,7 +109,7 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
         pos_max_length += 1  # Add space between cols if data has multiple chars
 
     for p in start | end | path:
-        c = arr[p]
+        c = arr[p].rjust(pos_max_length)
         if p in start:
             _c = text_format(c, foreground='black', background='green', style='bold')
         elif p in end:
