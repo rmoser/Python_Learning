@@ -23,7 +23,9 @@ def operations(h, w):
       B - a randomly-generated h x w Numpy array.
       s - the sum of A and B.
     """
-    #Your code here
+    A = np.random.random((h, w))
+    B = np.random.random((h, w))
+    return A, B, A+B
     raise NotImplementedError
 
 
@@ -38,7 +40,7 @@ def norm(A, B):
     Returns:
       s - the L2 norm of A+B.
     """
-    #Your code here
+    return np.linalg.norm(A+B)
     raise NotImplementedError
 
 
