@@ -55,20 +55,20 @@ def neural_network(inputs, weights):
      Returns (in this order):
        out - a 1 x 1 NumPy array, representing the output of the neural network
     """
-    #Your code here
+    return np.tanh(np.matmul(weights.T, inputs))
     raise NotImplementedError
 
 def scalar_function(x, y):
     """
     Returns the f(x,y) defined in the problem statement.
     """
-    #Your code here
+    return x * y if x <= y else x / y
     raise NotImplementedError
 
 def vector_function(x, y):
     """
     Make sure vector_function can deal with vector input x,y 
     """
-    #Your code here
+    return np.vectorize(scalar_function)(x, y)
     raise NotImplementedError
 
