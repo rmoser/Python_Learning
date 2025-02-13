@@ -112,12 +112,27 @@ def perceptron(feature_matrix, labels, T):
             (found also after T iterations through the feature matrix).
     """
     # Your code here
-    raise NotImplementedError
+    nsamples = feature_matrix.shape[0]
+    theta = np.zeros(feature_matrix.shape[1])
+    theta_0 = 0
     for t in range(T):
+        counter = 0
         for i in get_order(nsamples):
-            # Your code here
-            pass
-    raise NotImplementedError
+            x = feature_matrix[i]
+            y = labels[i]
+            _theta, _theta_0 = perceptron_single_step_update(x, y, theta, theta_0)
+            if (_theta == theta).all() and _theta_0 == theta_0:
+                counter += 1
+                continue
+
+            counter = 0
+            theta = _theta
+            theta_0 = _theta_0
+
+        if counter >= nsamples:
+            break
+
+    return theta, theta_0
 
 
 def average_perceptron(feature_matrix, labels, T):
