@@ -3,11 +3,9 @@ import numpy as np
 import random
 
 
-
 #==============================================================================
 #===  PART I  =================================================================
 #==============================================================================
-
 
 
 def get_order(n_samples):
@@ -20,7 +18,6 @@ def get_order(n_samples):
         indices = list(range(n_samples))
         random.shuffle(indices)
         return indices
-
 
 
 def hinge_loss_single(feature_vector, label, theta, theta_0):
@@ -60,9 +57,7 @@ def hinge_loss_full(feature_matrix, labels, theta, theta_0):
     """
 
     # Your code here
-    raise NotImplementedError
-
-
+    return np.maximum(0., 1. - (labels * (np.dot(theta, feature_matrix.T) + theta_0))).mean()
 
 
 def perceptron_single_step_update(
@@ -88,7 +83,6 @@ def perceptron_single_step_update(
     """
     # Your code here
     raise NotImplementedError
-
 
 
 def perceptron(feature_matrix, labels, T):
@@ -118,10 +112,8 @@ def perceptron(feature_matrix, labels, T):
     for t in range(T):
         for i in get_order(nsamples):
             # Your code here
-            raise NotImplementedError
-    # Your code here
+            pass
     raise NotImplementedError
-
 
 
 def average_perceptron(feature_matrix, labels, T):
@@ -185,7 +177,6 @@ def pegasos_single_step_update(
     raise NotImplementedError
 
 
-
 def pegasos(feature_matrix, labels, T, L):
     """
     Runs the Pegasos algorithm on a given set of data. Runs T iterations
@@ -217,11 +208,9 @@ def pegasos(feature_matrix, labels, T, L):
     raise NotImplementedError
 
 
-
 #==============================================================================
 #===  PART II  ================================================================
 #==============================================================================
-
 
 
 ##  #pragma: coderesponse template
@@ -230,7 +219,6 @@ def pegasos(feature_matrix, labels, T, L):
 ##  def classify_vector(feature_vector, theta, theta_0):
 ##      return 2*np.heaviside(decision_function(feature_vector, theta, theta_0), 0)-1
 ##  #pragma: coderesponse end
-
 
 
 def classify(feature_matrix, theta, theta_0):
@@ -291,7 +279,6 @@ def classifier_accuracy(
     raise NotImplementedError
 
 
-
 def extract_words(text):
     """
     Helper function for `bag_of_words(...)`.
@@ -309,7 +296,6 @@ def extract_words(text):
     return text.lower().split()
 
 
-
 def bag_of_words(texts, remove_stopword=False):
     """
     NOTE: feel free to change this code as guided by Section 3 (e.g. remove
@@ -323,7 +309,7 @@ def bag_of_words(texts, remove_stopword=False):
     """
     # Your code here
     raise NotImplementedError
-    
+
     indices_by_word = {}  # maps word to unique index
     for text in texts:
         word_list = extract_words(text)
@@ -333,7 +319,6 @@ def bag_of_words(texts, remove_stopword=False):
             indices_by_word[word] = len(indices_by_word)
 
     return indices_by_word
-
 
 
 def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
@@ -357,7 +342,6 @@ def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
         # Your code here
         raise NotImplementedError
     return feature_matrix
-
 
 
 def accuracy(preds, targets):
