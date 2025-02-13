@@ -223,7 +223,13 @@ def pegasos_single_step_update(
         completed.
     """
     # Your code here
-    raise NotImplementedError
+    pred = label * (theta.dot(feature_vector.T) + theta_0)
+    if pred <= 1:
+        theta = (1-eta*L) * theta + eta * label * feature_vector.T
+        theta_0 += eta * label
+    else:
+        theta = (1-eta*L) * theta
+    return theta, theta_0
 
 
 def pegasos(feature_matrix, labels, T, L):
@@ -253,9 +259,19 @@ def pegasos(feature_matrix, labels, T, L):
         the value of the theta_0, the offset classification parameter, found
         after T iterations through the feature matrix.
     """
-    # Your code here
-    raise NotImplementedError
+    nsamples = feature_matrix.shape[0]
+    theta = np.zeros(feature_matrix.shape[1])
+    theta_0 = 0
+    iters = 0
+    for t in range(T):
+        for i in get_order(nsamples):
+            iters += 1
+            eta = iters ** (-0.5)
+            x = feature_matrix[i]
+            y = labels[i]
+            theta, theta_0 = pegasos_single_step_update(x, y, L, eta, theta, theta_0)
 
+    return theta, theta_0
 
 #==============================================================================
 #===  PART II  ================================================================
@@ -287,8 +303,10 @@ def classify(feature_matrix, theta, theta_0):
         given theta and theta_0. If a prediction is GREATER THAN zero, it
         should be considered a positive classification.
     """
-    # Your code here
-    raise NotImplementedError
+    prediction = theta.dot(feature_matrix.T) + theta_0
+    prediction = 2 * (prediction > 0) - 1
+    # prediction = (prediction > 0) - (prediction <= 0)
+    return prediction
 
 
 def classifier_accuracy(
@@ -324,8 +342,11 @@ def classifier_accuracy(
         trained classifier on the training data and the second element is the
         accuracy of the trained classifier on the validation data.
     """
-    # Your code here
-    raise NotImplementedError
+    theta, theta_0 = classifier(train_feature_matrix, train_labels, **kwargs)
+    train_accuracy = accuracy(classify(train_feature_matrix, theta, theta_0), train_labels)
+    val_accuracy = accuracy(classify(val_feature_matrix, theta, theta_0), val_labels)
+
+    return train_accuracy, val_accuracy
 
 
 def extract_words(text):
@@ -357,8 +378,8 @@ def bag_of_words(texts, remove_stopword=False):
         integer `index`.
     """
     # Your code here
-    raise NotImplementedError
-
+    # raise NotImplementedError
+    stopword = set()
     indices_by_word = {}  # maps word to unique index
     for text in texts:
         word_list = extract_words(text)
