@@ -44,8 +44,6 @@ def check_real(ex_name, f, exp_res, *args):
 
 
 def equals(x, y):
-    if type(y) == np.ndarray or type(x) == np.ndarray:
-        return (x == pytest.approx(y)).all()
     return x == pytest.approx(y)
 
 def check_tuple(ex_name, f, exp_res, *args, **kwargs):
