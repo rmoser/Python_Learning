@@ -39,8 +39,7 @@ def hinge_loss_single(feature_vector, label, theta, theta_0):
         parameters.
     """
     # Your code here
-    raise NotImplementedError
-
+    return max(0., 1. - (label * (np.dot(theta, feature_vector) + theta_0)))
 
 
 def hinge_loss_full(feature_matrix, labels, theta, theta_0):
