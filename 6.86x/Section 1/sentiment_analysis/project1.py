@@ -10,7 +10,6 @@ INIT = False
 #===  PART I  =================================================================
 #==============================================================================
 
-# TODO: Resolve issue with running in Python Console!!!
 def get_order(n_samples):
     global INIT
     try:
