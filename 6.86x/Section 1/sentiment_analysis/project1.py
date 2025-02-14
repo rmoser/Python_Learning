@@ -1,23 +1,34 @@
 from string import punctuation, digits
 import numpy as np
 import random
+import os
 
+import utils
 
+INIT = False
 #==============================================================================
 #===  PART I  =================================================================
 #==============================================================================
 
-
+# TODO: Resolve issue with running in Python Console!!!
 def get_order(n_samples):
+    global INIT
     try:
-        with open(str(n_samples) + '.txt') as fp:
+        with open(rf'{utils.FOLDER}\{n_samples}.txt') as fp:
+            if not INIT:
+                print(f'get_order using {n_samples}.txt for random seed')
             line = fp.readline()
-            return list(map(int, line.split(',')))
+            indices = list(map(int, line.split(',')))
+
     except FileNotFoundError:
+        if not INIT:
+            print('get_order using random seed')
         random.seed(1)
         indices = list(range(n_samples))
         random.shuffle(indices)
-        return indices
+
+    INIT = True
+    return indices
 
 
 def hinge_loss_single(feature_vector, label, theta, theta_0):
@@ -359,7 +370,7 @@ def extract_words(text):
         count as their own words.
     """
     # Your code here
-    raise NotImplementedError
+    # raise NotImplementedError
 
     for c in punctuation + digits:
         text = text.replace(c, ' ' + c + ' ')
@@ -377,9 +388,12 @@ def bag_of_words(texts, remove_stopword=False):
         a dictionary that maps each word appearing in `texts` to a unique
         integer `index`.
     """
-    # Your code here
-    # raise NotImplementedError
-    stopword = set()
+
+    if remove_stopword:
+        stopword = set(np.loadtxt(rf'{utils.FOLDER}\stopwords.txt', delimiter='\t', unpack=True, dtype=str).tolist())
+    else:
+        stopword = set()
+
     indices_by_word = {}  # maps word to unique index
     for text in texts:
         word_list = extract_words(text)
@@ -409,8 +423,7 @@ def extract_bow_feature_vectors(reviews, indices_by_word, binarize=True):
             if word not in indices_by_word: continue
             feature_matrix[i, indices_by_word[word]] += 1
     if binarize:
-        # Your code here
-        raise NotImplementedError
+        feature_matrix = (feature_matrix > 0).astype(int)
     return feature_matrix
 
 

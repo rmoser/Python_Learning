@@ -1,4 +1,6 @@
 import csv
+import os.path
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -9,6 +11,7 @@ if sys.version_info[0] < 3:
     PYTHON3 = False
 else:
     PYTHON3 = True
+FOLDER = os.path.dirname(__file__)
 
 def load_toy_data(path_toy_data):
     """
@@ -16,7 +19,8 @@ def load_toy_data(path_toy_data):
     Returns the tuple (features, labels) in which features is an Nx2 numpy matrix and
     labels is a length-N vector of +1/-1 labels.
     """
-    labels, xs, ys = np.loadtxt(path_toy_data, delimiter='\t', unpack=True)
+    global FOLDER
+    labels, xs, ys = np.loadtxt(fr'{FOLDER}\{path_toy_data}', delimiter='\t', unpack=True)
     return np.vstack((xs, ys)).T, labels
 
 def load_data(path_data, extras=False):
@@ -39,11 +43,13 @@ def load_data(path_data, extras=False):
     basic_fields = {'sentiment', 'text'}
     numeric_fields = {'sentiment', 'helpfulY', 'helpfulN'}
 
+    global FOLDER
+
     data = []
     if PYTHON3:
-        f_data = open(path_data, encoding="latin1")
+        f_data = open(fr'{FOLDER}/{path_data}', encoding='latin1')
     else:
-        f_data = open(path_data)
+        f_data = open(fr'{FOLDER}/{path_data}')
 
     for datum in csv.DictReader(f_data, delimiter='\t'):
         for field in list(datum.keys()):
@@ -102,15 +108,16 @@ def plot_toy_data(algo_name, features, labels, thetas):
     xmin, xmax = plt.axis()[:2]
 
     # plot the decision boundary
-    theta, theta_0 = thetas
-    xs = np.linspace(xmin, xmax)
-    ys = -(theta[0]*xs + theta_0) / (theta[1] + 1e-16)
-    plt.plot(xs, ys, 'k-')
+    for t in thetas:
+        theta, theta_0 = t
+        xs = np.linspace(xmin, xmax)
+        ys = -(theta[0]*xs + theta_0) / (theta[1] + 1e-16)
+        plt.plot(xs, ys, 'k-', label=f'{t}')
 
     # show the plot
     algo_name = ' '.join((word.capitalize() for word in algo_name.split(' ')))
     plt.suptitle('Classified Toy Data ({})'.format(algo_name))
-    plt.show()
+    plt.show(block=False)
 
 def plot_tune_results(algo_name, param_name, param_vals, acc_train, acc_val):
     """
@@ -129,7 +136,7 @@ def plot_tune_results(algo_name, param_name, param_vals, acc_train, acc_val):
     plt.legend(['train','val'], loc='upper right', title='Partition')
     plt.xlabel(param_name)
     plt.ylabel('Accuracy (%)')
-    plt.show()
+    plt.show(block=False)
 
 def tune(train_fn, param_vals, train_feats, train_labels, val_feats, val_labels):
     train_accs = np.ndarray(len(param_vals))

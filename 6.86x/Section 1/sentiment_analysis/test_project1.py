@@ -451,14 +451,14 @@ def test_extract_bow_feature_vectors_00():
         res = p1.extract_bow_feature_vectors(texts, dictionary)
     except NotImplementedError:
         log(red("FAIL"), ex_name, ": not implemented")
-        return
+        return False
 
     if not type(res) == np.ndarray:
         log(red("FAIL"), ex_name, ": does not return a numpy array, type: ", type(res))
-        return
+        return False
     if not len(res) == len(exp_res):
         log(red("FAIL"), ex_name, ": expected an array of shape ", exp_res.shape, " but got array of shape", res.shape)
-        return
+        return False
 
     log(green("PASS"), ex_name)
 
@@ -468,7 +468,7 @@ def test_extract_bow_feature_vectors_00():
         log(green("PASS"), ex_name, ": correct non binary features")
     else:
         log(red("FAIL"), ex_name, ": unexpected feature matrix")
-        return
+        return False
 
 def main():
     log(green("PASS"), "Import project1")
