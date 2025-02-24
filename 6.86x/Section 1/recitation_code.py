@@ -33,12 +33,12 @@ X = preprocessing.scale(X) # scale each data attribute to zero-mean and unit var
 
 
 # Plot the first 2 attributes of training points
-sns.scatterplot(X[:, 0], X[:, 1], hue=y)
+sns.scatterplot(x=X[:, 0], y=X[:, 1], hue=y)
 plt.xlabel('Tumor Radius')
 plt.ylabel('Tumor Texture')
 plt.grid(True)
+plt.show(block=(not '__file__' in vars(__builtins__)))
 plt.show()
-
 
 # In[30]:
 
