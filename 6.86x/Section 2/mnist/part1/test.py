@@ -232,7 +232,7 @@ def test_compute_probabilities():
     return True
 
 
-def test_compute_cost_function():
+def test_compute_cost_function_0():
     ex_name = "Compute cost function"
     n, d, k = 3, 5, 7
     X = np.arange(0, n * d).reshape(n, d)
@@ -244,6 +244,46 @@ def test_compute_cost_function():
     if check_real(
             ex_name, softmax.compute_cost_function,
             exp_res, X, Y, zeros, lambda_factor, temp):
+        return False
+    log(green("PASS"), ex_name, "")
+    return True
+
+
+def test_compute_cost_function_1():
+    ex_name = "Compute cost function 1"
+    X = np.array([
+        [ 1.,  9., 74., 62., 66., 51., 25., 30., 54., 53., 29.],
+        [ 1., 42., 55., 17., 39., 47., 29., 46., 68., 94., 19.],
+        [ 1., 46., 30., 58., 35., 93., 36., 41., 60., 53., 17.],
+        [ 1., 93., 77., 57., 49., 15., 81., 67., 54., 46., 87.],
+        [ 1., 15., 97., 39., 45.,  6., 88., 21., 32., 54., 16.],
+        [ 1., 17., 93., 81.,  3., 76., 87., 26., 23., 39., 97.],
+        [ 1., 87., 55., 24., 32., 68., 89., 31., 97., 69., 51.],
+        [ 1., 76., 89., 25.,  1., 38., 70., 52., 71., 45., 85.],
+        [ 1., 15., 73., 41.,  8., 43., 36., 78., 25., 38., 49.],
+        [ 1.,  4., 17., 43., 34., 96., 39., 99., 79.,  6., 93.]
+    ])
+
+    theta = np.array([
+        [-0.03, -1.212, -1.98, -1.341, -0.936, -1.599, -1.74, -1.473, -1.689, -1.491, -1.629],
+        [0.27, 10.908, 17.82, 12.069, 8.424, 14.391, 15.66, 13.257, 15.201, 13.419, 14.661],
+        [-0.03, -1.212, -1.98, -1.341, -0.936, -1.599, -1.74, -1.473, -1.689, -1.491, -1.629],
+        [-0.03, -1.212, -1.98, -1.341, -0.936, -1.599, -1.74, -1.473, -1.689, -1.491, -1.629],
+        [-0.03, -1.212, -1.98, -1.341, -0.936, -1.599, -1.74, -1.473, -1.689, -1.491, -1.629],
+        [-0.03, -1.212, -1.98, -1.341, -0.936, -1.599, -1.74, -1.473, -1.689, -1.491, -1.629],
+        [-0.03, -1.212, -1.98, -1.341, -0.936, -1.599, -1.74, -1.473, -1.689, -1.491, -1.629],
+        [-0.03, -1.212, -1.98, -1.341, -0.936, -1.599, -1.74, -1.473, -1.689, -1.491, -1.629],
+        [-0.03, -1.212, -1.98, -1.341, -0.936, -1.599, -1.74, -1.473, -1.689, -1.491, -1.629],
+        [-0.03, -1.212, -1.98, -1.341, -0.936, -1.599, -1.74, -1.473, -1.689, -1.491, -1.629]
+    ])
+
+    Y = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    temp = 1.0
+    lambda_factor = 0.0001
+    exp_res = 0.105967
+    if check_real(
+            ex_name, softmax.compute_cost_function,
+            exp_res, X, Y, theta, lambda_factor, temp):
         return False
     log(green("PASS"), ex_name, "")
     return True
@@ -278,7 +318,7 @@ def test_run_gradient_descent_iteration():
     return True
 
 
-def check_update_y():
+def test_update_y():
     ex_name = "Update y"
     train_y = np.arange(0, 10)
     test_y = np.arange(9, -1, -1)
@@ -290,6 +330,7 @@ def check_update_y():
             ex_name, softmax.update_y,
             exp_res, train_y, test_y):
         return False
+
     log(green("PASS"), ex_name, "")
     return True
 
@@ -384,7 +425,8 @@ def main():
         test_svm()
         test_multiclass_svm()
         test_compute_probabilities()
-        test_compute_cost_function()
+        test_compute_cost_function_0()
+        test_compute_cost_function_1()
         test_run_gradient_descent_iteration()
         test_update_y()
         test_project_onto_PC()
