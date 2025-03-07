@@ -56,7 +56,10 @@ def compute_cost_function(X, Y, theta, lambda_factor, temp_parameter):
         c - the cost value (scalar)
     """
     #YOUR CODE HERE
-    raise NotImplementedError
+    probabilities = compute_probabilities(X, theta, temp_parameter)
+    probabilities = np.clip(probabilities, 1e-15, 1 - 1e-15)
+    return - np.array([np.log(probabilities[y, k]) for k, y in enumerate(Y)]).mean() + lambda_factor / 2 * (theta * theta).sum()
+
 
 def run_gradient_descent_iteration(X, Y, theta, alpha, lambda_factor, temp_parameter):
     """
