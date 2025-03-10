@@ -79,7 +79,34 @@ def run_gradient_descent_iteration(X, Y, theta, alpha, lambda_factor, temp_param
         theta - (k, d) NumPy array that is the final value of parameters theta
     """
     #YOUR CODE HERE
-    raise NotImplementedError
+    # probabilities = compute_probabilities(X, theta, temp_parameter)
+    # probabilities = np.clip(probabilities, 1e-15, 1 - 1e-15)
+    #
+    # z = np.matmul(theta, X.T)
+    # e = np.exp(z)
+    # n = e.sum()
+    # p = probabilities
+    # Y_i = np.zeros(probabilities.shape)
+    # for i, j in enumerate(Y):
+    #     Y_i[i, j] = 1
+    # Y_i = Y_i.T
+    # dl_dp = (-1 / probabilities.T) * Y_i
+    # dl_dn = - np.dot(dl_dp, e) / n ** 2
+    # dl_de = dl_dp / n + dl_dn
+    #
+    # y_predicted = np.matmul(theta, X.T)
+    # dJdT = -(2 / X.shape[0]) * sum(np.matmul(X.T, (Y - y_predicted)))
+    # dJT = np.array([X[k] - probabilities[y, k] for k, y in enumerate(Y)]).mean()
+    # dJT = lambda_factor / 2 * (theta * theta).sum()
+    # dJT = probabilities - Y
+
+    n = X.shape[0]
+    k = theta.shape[0]
+    probabilities = compute_probabilities(X, theta, temp_parameter)
+    M = sparse.coo_matrix(([1] * n, (Y, range(n))), shape=(k, n)).toarray()
+    non_reg = (M - probabilities) @ X
+    theta -= alpha * (-1 / (temp_parameter * n) * non_reg + lambda_factor * theta)
+    return theta
 
 def update_y(train_y, test_y):
     """
@@ -99,7 +126,8 @@ def update_y(train_y, test_y):
                     for each datapoint in the test set
     """
     #YOUR CODE HERE
-    raise NotImplementedError
+    return train_y % 3, test_y % 3
+
 
 def compute_test_error_mod3(X, Y, theta, temp_parameter):
     """
@@ -117,7 +145,10 @@ def compute_test_error_mod3(X, Y, theta, temp_parameter):
         test_error - the error rate of the classifier (scalar)
     """
     #YOUR CODE HERE
-    raise NotImplementedError
+    pred = get_classification(X, theta, temp_parameter) % 3
+    y = Y % 3
+    return 1 - np.mean(pred == y)
+
 
 def softmax_regression(X, Y, temp_parameter, alpha, lambda_factor, k, num_iterations):
     """
