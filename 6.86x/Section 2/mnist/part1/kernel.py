@@ -37,5 +37,8 @@ def rbf_kernel(X, Y, gamma):
         Returns:
             kernel_matrix - (n, m) Numpy array containing the kernel matrix
     """
-    # YOUR CODE HERE
-    raise NotImplementedError
+    res = np.zeros((X.shape[0], Y.shape[0]))
+    for i in range(res.shape[0]):
+        for j in range(res.shape[1]):
+            res[i, j] = np.exp(-1 * gamma * np.linalg.norm(X[i] - Y[j]) ** 2)
+    return res
