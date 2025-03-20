@@ -2,7 +2,7 @@ import pickle, gzip, numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import math
-
+import os
 
 def plot_images(X):
     if X.ndim == 1:
@@ -58,6 +58,14 @@ def get_MNIST_data():
         test_y  - 1D Numpy array (n, ) where each row is a label
 
     """
+    if not os.path.exists('../Datasets'):
+        os.chdir('6.86x')
+        os.chdir('Section 2')
+        os.chdir('mnist')
+        os.chdir('part2-mnist')
+        if not os.path.exists('../Datasets'):
+            raise FileNotFoundError('Unable to locate Datasets folder for mnist.pkl.gz!')
+
     train_set, valid_set, test_set = read_pickle_data('../Datasets/mnist.pkl.gz')
     train_x, train_y = train_set
     valid_x, valid_y = valid_set
