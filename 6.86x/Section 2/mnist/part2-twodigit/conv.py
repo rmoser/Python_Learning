@@ -19,11 +19,61 @@ class CNN(nn.Module):
 
     def __init__(self, input_dimension):
         super(CNN, self).__init__()
+        self.flatten = Flatten()
         # TODO initialize model layers here
+        self.conv_00 = nn.Conv2d(1, 32, (3, 3))
+        self.conv_01 = nn.Conv2d(1, 32, (3, 3))
+
+        self.maxp_10 = nn.MaxPool2d((2, 2))
+        self.maxp_11 = nn.MaxPool2d((2, 2))
+
+        self.drop_10 = nn.Dropout(0.5)
+        self.drop_11 = nn.Dropout(0.5)
+
+        self.conv_20 = nn.Conv2d(32, 64, (3, 3))
+        self.conv_21 = nn.Conv2d(32, 64, (3, 3))
+
+        self.maxp_30 = nn.MaxPool2d((2, 2))
+        self.maxp_31 = nn.MaxPool2d((2, 2))
+
+        self.linear_40 = nn.Linear(2880, 128)
+        self.linear_41 = nn.Linear(2880, 128)
+
+        self.linear_50 = nn.Linear(128, 10)
+        self.linear_51 = nn.Linear(128, 10)
 
     def forward(self, x):
 
         # TODO use model layers to predict the two digits
+        # print('x', x.shape)
+        h00 = F.relu(self.conv_00(x))
+        # print('h00', h00.shape)
+        h10 = self.maxp_10(h00)
+        # print('h10', h10.shape)
+        h20 = F.relu(self.conv_20(h10))
+        # print('h20', h20.shape)
+        h30 = self.maxp_30(h20)
+        # print('h30', h30.shape)
+        h40 = self.flatten(h30)
+        # print('h40', h40.shape)
+        h50 = self.linear_40(h40)
+        # print('h50', h50.shape)
+        h60 = self.drop_10(h50)
+        # print('h60', h60.shape)
+        h70 = self.linear_50(h60)
+        # print('h70', h70.shape)
+
+        h01 = F.relu(self.conv_01(x))
+        h11 = self.maxp_11(h01)
+        h21 = F.relu(self.conv_21(h11))
+        h31 = self.maxp_31(h21)
+        h41 = self.flatten(h31)
+        h51 = self.linear_41(h41)
+        h61 = self.drop_11(h51)
+        h71 = self.linear_51(h61)
+
+        out_first_digit = h70
+        out_second_digit = h71
 
         return out_first_digit, out_second_digit
 
