@@ -1,6 +1,8 @@
 """Mixture model using EM"""
 from typing import Tuple
 import numpy as np
+from sklearn.covariance import log_likelihood
+
 from common import GaussianMixture
 
 
@@ -17,7 +19,12 @@ def estep(X: np.ndarray, mixture: GaussianMixture) -> Tuple[np.ndarray, float]:
             for all components for all examples
         float: log-likelihood of the assignment
     """
-    raise NotImplementedError
+    # E = np.exp(-0.5 * (np.square(np.expand_dims(X, 1) - mixture.mu).sum(axis=2) / np.expand_dims(mixture.var, 1)).sum(axis=2))
+    E = np.exp(-0.5 * (np.square(np.expand_dims(X, 1) - mixture.mu).sum(axis=2) / np.expand_dims(mixture.var, 0)))
+    P = (1 / (2 * np.pi * mixture.var) ** (X.shape[1]/2) * E) * mixture.p
+    probs = P / np.expand_dims(P.sum(axis=1), 1)
+    log_likelihood = np.log(P.sum(axis=1)).sum()
+    return probs, log_likelihood
 
 
 def mstep(X: np.ndarray, post: np.ndarray) -> GaussianMixture:
