@@ -61,12 +61,12 @@ def plot(X: np.ndarray, mixture: GaussianMixture, post: np.ndarray,
         theta = 0
         for j in range(K):
             offset = percent[i, j] * 360
-            arc = Arc(point,
-                      r,
-                      r,
-                      0,
-                      theta,
-                      theta + offset,
+            arc = Arc(xy=point,
+                      width=r,
+                      height=r,
+                      angle=0,
+                      theta1=theta,
+                      theta2=theta + offset,
                       edgecolor=color[j])
             ax.add_patch(arc)
             theta += offset
@@ -79,7 +79,8 @@ def plot(X: np.ndarray, mixture: GaussianMixture, post: np.ndarray,
             mu[0], mu[1], sigma)
         ax.text(mu[0], mu[1], legend)
     plt.axis('equal')
-    plt.show()
+    plt.savefig(f'{title}.png')
+    plt.show(block=True)
 
 
 def rmse(X, Y):
@@ -98,4 +99,6 @@ def bic(X: np.ndarray, mixture: GaussianMixture,
     Returns:
         float: the BIC for this mixture
     """
-    raise NotImplementedError
+    p = len(mixture.mu.flatten()) + len(mixture.var.flatten()) + len(mixture.p.flatten()) - 1
+    n = len(X)
+    return log_likelihood - 0.5 * p * np.log(n)
