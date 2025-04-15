@@ -65,4 +65,47 @@ def run(X: np.ndarray, mixture: GaussianMixture,
             for all components for all examples
         float: log-likelihood of the current assignment
     """
-    raise NotImplementedError
+    probs, ll = None, None
+    _ll = 0
+    while True:
+        probs, ll = estep(X, mixture)
+        mixture = mstep(X, probs)
+        if np.abs(ll - _ll) <= 1e-6 * np.abs(ll):
+            break
+        _ll = ll
+
+    return mixture, probs, ll
+
+
+def run2(X: np.ndarray, mixture: GaussianMixture,
+        post: np.ndarray) -> Tuple[GaussianMixture, np.ndarray, float]:
+    """Runs the mixture model
+
+    Args:
+        X: (n, d) array holding the data
+        post: (n, K) array holding the soft counts
+            for all components for all examples
+
+    Returns:
+        GaussianMixture: the new gaussian mixture
+        np.ndarray: (n, K) array holding the soft counts
+            for all components for all examples
+        float: log-likelihood of the current assignment
+    """
+
+    ## TODO SB
+
+    old_log_lh = None
+    new_log_lh = None  # Keep track of log likelihood to check convergence
+
+    # Start the main loop
+    while old_log_lh is None or (new_log_lh - old_log_lh > 1e-6 * np.abs(new_log_lh)):
+        old_log_lh = new_log_lh
+
+        # E-step
+        post, new_log_lh = estep(X, mixture)
+
+        # M-step
+        mixture = mstep(X, post)
+
+    return mixture, post, new_log_lh
