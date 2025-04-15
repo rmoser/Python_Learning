@@ -3,6 +3,7 @@ from typing import Tuple
 import numpy as np
 from sklearn.covariance import log_likelihood
 
+import common
 from common import GaussianMixture
 
 
@@ -39,7 +40,14 @@ def mstep(X: np.ndarray, post: np.ndarray) -> GaussianMixture:
     Returns:
         GaussianMixture: the new gaussian mixture
     """
-    raise NotImplementedError
+    nj = np.sum(post, axis=0)  # shape is (K, )
+    p = post.mean(axis=0)
+
+    mu = post.T @ X / np.expand_dims(nj, 1)
+    var = (post * ((np.expand_dims(X, 1) - mu)**2).sum(axis=2)).sum(axis=0) / (nj * X.shape[1])
+    return GaussianMixture(mu, var, p)
+
+
 
 
 def run(X: np.ndarray, mixture: GaussianMixture,
