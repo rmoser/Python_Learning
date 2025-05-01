@@ -100,12 +100,12 @@ def load_game_data():
             act_index = actions.index(act)
             obj_index = objects.index(obj)
             # valid commands: A(h,(a,o))=1 if (a,o) is valid for hidden state h.
-            command_is_valid[room_index, act_index, obj_index] = 1;
+            command_is_valid[room_index, act_index, obj_index] = 1
 
             next_room_name = transit[valid_index]
             next_room_index = rooms.index(next_room_name)
             #deterministic transition
-            transit_matrix[room_index, act_index, obj_index, next_room_index] = 1;
+            transit_matrix[room_index, act_index, obj_index, next_room_index] = 1
 
     text_to_hidden_state_mapping()
 
@@ -122,9 +122,9 @@ def step_game(current_room_desc, current_quest_desc, action_index, object_index)
     current_room_index = rooms_desc_map[current_room_desc]
     quest_index = quests_map[current_quest_desc]
 
-    if (command_is_valid[current_room_index, action_index, object_index]==1):
+    if command_is_valid[current_room_index, action_index, object_index]==1:
         # quest has been finished
-        if ((actions[action_index]==quest_actions[quest_index]) and (objects[object_index]==quest_objects[quest_index])):
+        if (actions[action_index] == quest_actions[quest_index]) and (objects[object_index] == quest_objects[quest_index]):
             terminal = True
             reward = QUEST_REWARD
 
@@ -157,10 +157,10 @@ def step_game(current_room_desc, current_quest_desc, action_index, object_index)
 
     # quest remains the same during each episode
     next_quest_desc = current_quest_desc
-    return (next_room_desc, next_quest_desc, reward, terminal)
+    return next_room_desc, next_quest_desc, reward, terminal
 
 # start a new game
-def newGame():
+def new_game():
     global STEP_COUNT
     STEP_COUNT = 0
     # random initial state: room_index + quest_index
@@ -178,7 +178,7 @@ def newGame():
         print('Start Room %d: %s. %s' % (room_index, room_name, room_desc,))
         print('Start quest: %s' % (quest_desc,))
 
-    return (room_desc, quest_desc, terminal)
+    return room_desc, quest_desc, terminal
 
 def get_actions():
     return actions
@@ -188,7 +188,7 @@ def get_objects():
 
 def make_all_states_index():
     """
-    Returns tow dictionaries:
+    Returns two dictionaries:
     1: one for all unique room descriptions occur in the game
     2: one for all unique quests in the game
     """
@@ -203,7 +203,7 @@ def make_all_states_index():
         if quest not in dictionary_quest_desc:
             dictionary_quest_desc[quest] = len(dictionary_quest_desc)
 
-    return (dictionary_room_desc, dictionary_quest_desc)
+    return dictionary_room_desc, dictionary_quest_desc
 
 # def gameOver(room_index, quest_index, action_index, object_index):
 #     if (command_is_valid[room_index, action_index, object_index]==1):
