@@ -6,10 +6,13 @@ from tqdm import tqdm
 import framework
 import utils
 
+
 DEBUG = False
 
 GAMMA = 0.5  # discounted factor
+
 TRAINING_EP = 0.5  # epsilon-greedy parameter for training
+
 TESTING_EP = 0.05  # epsilon-greedy parameter for testing
 NUM_RUNS = 10
 NUM_EPOCHS = 200
@@ -169,21 +172,27 @@ if __name__ == '__main__':
     # set up the game
     framework.load_game_data()
 
-    epoch_rewards_test = []  # shape NUM_RUNS * NUM_EPOCHS
+    for alpha in (0.000001, 0.0001, 0.01, 1):
+        ALPHA = alpha
+        epoch_rewards_test = []  # shape NUM_RUNS * NUM_EPOCHS
 
-    for _ in range(NUM_RUNS):
-        epoch_rewards_test.append(run())
+        for _ in range(NUM_RUNS):
+            epoch_rewards_test.append(run())
 
-    epoch_rewards_test = np.array(epoch_rewards_test)
+        epoch_rewards_test = np.array(epoch_rewards_test)
 
-    x = np.arange(NUM_EPOCHS)
-    # plt.interactive(False)
-    matplotlib.use('QtAgg')
-    fig, axis = plt.subplots()
-    axis.plot(x, np.mean(epoch_rewards_test,
-                         axis=0))  # plot reward per epoch averaged per run
-    axis.set_xlabel('Epochs')
-    axis.set_ylabel('reward')
-    axis.set_title(('Tablular: nRuns=%d, Epilon=%.2f, Epi=%d, alpha=%.4f' %
-                    (NUM_RUNS, TRAINING_EP, NUM_EPIS_TRAIN, ALPHA)))
-    plt.show(block=True)
+        matplotlib.use('QtAgg')
+        x = np.arange(NUM_EPOCHS)
+        fig, axis = plt.subplots()
+        axis.plot(x, np.mean(epoch_rewards_test,
+                             axis=0))  # plot reward per epoch averaged per run
+        axis.set_xlabel('Epochs')
+        axis.set_ylabel('reward')
+        axis.set_title(('Tablular: nRuns=%d, Epilon=%.2f, Epi=%d, alpha=%.4f' %
+                        (NUM_RUNS, TRAINING_EP, NUM_EPIS_TRAIN, ALPHA)))
+        plt.savefig(rf'G:/temp/alpha_{alpha}.png')
+        # plt.show(block=True)
+
+        print(f'Last epoch: {epoch_rewards_test.shape}')
+        print(f'Last epoch mean(reward): {epoch_rewards_test[-1].mean()}')
+        print(epoch_rewards_test)
