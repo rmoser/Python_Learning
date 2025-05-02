@@ -35,8 +35,11 @@ def epsilon_greedy(state_1, state_2, q_func, epsilon):
         (int, int): the indices describing the action/object to take
     """
     # TODO Your code here
-    action_index, object_index = None, None
-    return (action_index, object_index)
+    if np.random.random() < epsilon:  # Random action
+        action_index, object_index = np.random.randint(NUM_ACTIONS), np.random.randint(NUM_OBJECTS)
+    else:
+        action_index, object_index = np.unravel_index(np.argmax(q_func[state_1, state_2]), (NUM_ACTIONS, NUM_OBJECTS))
+    return action_index, object_index
 
 
 # pragma: coderesponse end
@@ -50,10 +53,11 @@ def tabular_q_learning(q_func, current_state_1, current_state_2, action_index,
 
     Args:
         q_func (np.ndarray): current Q-function
-        current_state_1, current_state_2 (int, int): two indices describing the current state
+        current_state_1 (int): index of room description)
+        current_state_2 (int): index of quest)
         action_index (int): index of the current action
         object_index (int): index of the current object
-        reward (float): the immediate reward the agent recieves from playing current command
+        reward (float): the immediate reward the agent receives from playing current command
         next_state_1, next_state_2 (int, int): two indices describing the next state
         terminal (bool): True if this episode is over
 
@@ -61,8 +65,14 @@ def tabular_q_learning(q_func, current_state_1, current_state_2, action_index,
         None
     """
     # TODO Your code here
+    if terminal:
+        max_q = 0.
+    else:
+        max_q = q_func[next_state_1, next_state_2].max()
+    _q = q_func[current_state_1, current_state_2, action_index,
+           object_index]
     q_func[current_state_1, current_state_2, action_index,
-           object_index] = 0  # TODO Your update here
+           object_index] = (1-ALPHA) * _q + ALPHA * (reward + GAMMA * max_q)
 
     return None  # This function shouldn't return anything
 
@@ -88,7 +98,7 @@ def run_episode(for_training):
     # initialize for each episode
     # TODO Your code here
 
-    (current_room_desc, current_quest_desc, terminal) = framework.newGame()
+    current_room_desc, current_quest_desc, terminal = framework.new_game()
 
     while not terminal:
         # Choose next action and execute
@@ -110,6 +120,7 @@ def run_episode(for_training):
     if not for_training:
         return epi_reward
 
+    return None
 
 # pragma: coderesponse end
 
@@ -145,7 +156,7 @@ def run():
 
 if __name__ == '__main__':
     # Data loading and build the dictionaries that use unique index for each state
-    (dict_room_desc, dict_quest_desc) = framework.make_all_states_index()
+    dict_room_desc, dict_quest_desc = framework.make_all_states_index()
     NUM_ROOM_DESC = len(dict_room_desc)
     NUM_QUESTS = len(dict_quest_desc)
 
