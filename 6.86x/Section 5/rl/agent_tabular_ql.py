@@ -1,5 +1,6 @@
 """Tabular QL agent"""
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import framework
@@ -94,28 +95,33 @@ def run_episode(for_training):
     """
     epsilon = TRAINING_EP if for_training else TESTING_EP
 
-    epi_reward = None
     # initialize for each episode
-    # TODO Your code here
-
-    current_room_desc, current_quest_desc, terminal = framework.new_game()
+    epi_reward = 0.
+    step_count = 0
+    current_room_desc, current_quest_desc, terminal = framework.newGame()
 
     while not terminal:
         # Choose next action and execute
-        # TODO Your code here
+        current_room_idx = dict_room_desc[current_room_desc]
+        quest_idx = dict_quest_desc[current_quest_desc]
+        next_action_idx, next_object_idx = epsilon_greedy(current_room_idx, quest_idx, q_func, epsilon)
+        next_room_desc, next_quest_desc, reward, terminal = framework.step_game(current_room_desc, current_quest_desc, next_action_idx, next_object_idx)
+        step_count += 1
+        next_room_idx = dict_room_desc[next_room_desc]
+        next_quest_idx = dict_quest_desc[next_quest_desc]
 
         if for_training:
             # update Q-function.
-            # TODO Your code here
+            tabular_q_learning(q_func, current_room_idx, quest_idx, next_action_idx, next_object_idx, reward, next_room_idx, next_quest_idx, terminal)
             pass
 
         if not for_training:
             # update reward
             # TODO Your code here
-            pass
+            epi_reward += GAMMA ** (step_count-1) * reward
 
         # prepare next step
-        # TODO Your code here
+        current_room_desc, current_quest_desc = next_room_desc, next_quest_desc
 
     if not for_training:
         return epi_reward
@@ -171,6 +177,8 @@ if __name__ == '__main__':
     epoch_rewards_test = np.array(epoch_rewards_test)
 
     x = np.arange(NUM_EPOCHS)
+    # plt.interactive(False)
+    matplotlib.use('QtAgg')
     fig, axis = plt.subplots()
     axis.plot(x, np.mean(epoch_rewards_test,
                          axis=0))  # plot reward per epoch averaged per run
@@ -178,4 +186,4 @@ if __name__ == '__main__':
     axis.set_ylabel('reward')
     axis.set_title(('Tablular: nRuns=%d, Epilon=%.2f, Epi=%d, alpha=%.4f' %
                     (NUM_RUNS, TRAINING_EP, NUM_EPIS_TRAIN, ALPHA)))
-    plt.show()
+    plt.show(block=True)
