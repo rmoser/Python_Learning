@@ -1,5 +1,6 @@
 """Linear QL agent"""
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import framework
@@ -46,8 +47,12 @@ def epsilon_greedy(state_vector, theta, epsilon):
         (int, int): the indices describing the action/object to take
     """
     # TODO Your code here
-    action_index, object_index = None, None
-    return (action_index, object_index)
+
+    if np.random.random() < epsilon:  # Random action
+        return index2tuple(np.random.randint(len(state_vector)))
+
+    return index2tuple(np.argmax((theta @ state_vector)))
+
 # pragma: coderesponse end
 
 
@@ -160,6 +165,7 @@ if __name__ == '__main__':
 
     epoch_rewards_test = np.array(epoch_rewards_test)
 
+    matplotlib.use('QtAgg')
     x = np.arange(NUM_EPOCHS)
     fig, axis = plt.subplots()
     axis.plot(x, np.mean(epoch_rewards_test,
