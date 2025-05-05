@@ -14,6 +14,13 @@ def load_data(path_data):
     """Return a dictionary for the state descriptions displayed to player"""
     global PYTHON3
 
+    import pathlib
+    path_data = pathlib.Path(path_data)
+    if not path_data.exists():
+        path_data = pathlib.Path(r'C:\Git\Python_Learning\6.86x\Section 5\rl') / path_data
+    if not path_data.exists():
+        raise FileNotFoundError
+
     data = []
     if PYTHON3:
         f_data = open(path_data, encoding="latin1")
