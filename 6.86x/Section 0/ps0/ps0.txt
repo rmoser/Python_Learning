@@ -1,0 +1,14 @@
+theta = [3, 1]T
+theta_0 = -1
+
+a = [-1, -1]
+
+a_ = a - theta_0 = [0,0]
+theta_ = theta - theta_0 = [4, 2]T
+
+c_ = a_ . theta_ / (theta_ . theta_)
+(-3 + -1) / (3*3 + 1*1)
+c_ = -2/5
+c = -2/5 + -1 = -7/5
+
+

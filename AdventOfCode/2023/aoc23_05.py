@@ -5,7 +5,10 @@ day = 5
 import numpy as np
 import aocd
 import os
-os.environ["AOC_SESSION"] = "53616c7465645f5ffc80017c3c8c930fbc4880b09a0cbad8a01217c74864308b01c260ef4e14a659e630448499f917ddbd11b3c5b308647c43be75ef54a40d08"
+import utils
+from pprint import pprint
+import itertools as it
+import math
 
 text0 = """
 seeds: 79 14 55 13
@@ -44,121 +47,135 @@ humidity-to-location map:
 """
 text1 = aocd.get_data(day=day, year=year)
 
+def parse(text):
+    rules = dict()
+    for section in text:
+        for line in section.splitlines():
+            if line.startswith('seeds:'):
+                rules['seed'] = [int(x) for x in line[7:].split()]
+                continue
 
-# def gen_map(text):
-#     map = dict()
-#     for line in text:
-#         dest, src, rng = (int(x) for x in line.split())
-#         for i in range(rng):
-#             map[src+i] = dest+i
-#     for i in range(max(map.keys())):
-#         if i not in map:
-#             map[i] = i
-#     return map
-#
-#
-# def update_map(a, b):
-#     m = dict()
-#     for k, v in a.items():
-#         m[k] = b[v]
-#     return m
+            if line.endswith(' map:'):
+                rule = line.replace(' map:', '').split('-')
+                rule = rule[0], rule[-1]
+                continue
+
+            rules[rule] = rules.get(rule, list()) + [tuple(int(x) for x in line.split())]
+    return rules
+
+def valid(ranges):
+    for a, b in it.combinations(ranges, 2):
+        if b[0] <= sum(a) < sum(b):
+            return False
+        if a[0] <= sum(b) < sum(a):
+            return False
+    return True
+
+def compress(ranges):
+    result = []
+
+    _ranges = sorted(ranges)
+
+    a = _ranges[0]
+    for b in _ranges[1:]:
+        # a and b are consecutive
+        if a[0] + a[1] == b[0]:
+            a = a[0], a[1] + b[1]
+            continue
+
+        # a == b
+        if a == b:
+            continue
+
+        # b overlaps a:
+        if a[0] <= b[0] < a[1]:
+            a = a[0], max(sum(a), sum(b))
+            continue
+
+        result.append(a)
+        a = b
+    result.append(a)
+
+    return result
 
 
-def proc_map(value, map):
-    for line in map:
-        # dest, src, rng = line
-        min, max, offset = line
-        if min <= value < max:
-            return value + offset
-    return value
+def map_all(seeds, rules):
+    next_rule = 'seed'
+
+    while True:
+        match_rule = tuple(x for x in rules if x[0] == next_rule)
+        if not match_rule:
+            break
+        rule = match_rule[0]
+        next_rule = rule[1]
+        seeds = map_range(seeds, rules[rule])
+
+    return seeds
 
 
-def combine_maps(a, b):
-    m = list()
-    for aline in a:
-        a_min, a_max, a_offset = aline
+def map_range(src_ranges, dest_maps):
+    # inputs = (79 14), (55 13)
+    # ranges = [(0, 15, 37), (52, 50, 48)]
 
-        for bline in b:
-            b_min, b_max, b_offset = bline
+    # (79, 14) -> (0, 15, 37)   => No overlap
+    # (79, 14) -> (52, 50, 48)  => (81, 14)
 
-            m_offset = a_offset + b_offset
-            m_min = a_min
+    # (55, 13) -> (0, 15, 37):  => No overlap
+    # (55, 13) -> (52, 50, 48): => (57, 13)
 
-            if b_min <= a_min + a_offset < b_max:
-                m_min = a_min
-                m_max = min(a_max, b_max-a_offset)
-                m_offset = a_offset + b_offset
-                m.append(m_min, m_max, m_offset)
-                if m_max < a_max:
-                    m_min = m_max
-                    m_max =
+    result = []
+    for src_range in src_ranges:
+        for dest_map in dest_maps:
+            map_in = dest_map[1], dest_map[2]
+            map_out = dest_map[0], dest_map[2]
+            offset = dest_map[0] - dest_map[1]
 
-def translate_map(map):
-    m = []
-    for line in map:
-        dest, src, rng = line
-        m.append((src, src+rng, dest-src))
-    m.sort()
-    return m
+            # No overlap
+            if src_range[0] >= sum(map_in) or sum(src_range) <= map_in[0]:
+                continue
 
+            # src_range included in dest_rng:
+            if map_in[0] <= src_range[0] and sum(src_range) <= sum(map_in):
+                result.append((src_range[0] + offset, src_range[1]))
+                src_range = (src_range[0], 0)
+                continue
+
+            # Only start of src_range overlaps map_in:
+            if map_in[0] <= src_range[0] and sum(src_range) > sum(map_in):
+                overlap = sum(map_in) - src_range[0]
+                result.append((src_range[0]+offset, overlap))
+                src_range = sum(map_in), src_range[1]-overlap
+                continue
+
+            # Only end of src_range overlaps map_in
+            if map_in[0] > src_range[0] and sum(src_range) <= sum(map_in):
+                overlap = sum(src_range) - map_in[0]
+                result.append((map_out[0], overlap))
+                src_range = src_range[0], src_range[1]-overlap
+                continue
+
+        # Any unmapped ranges propagate to the next map
+        if src_range[1]:
+            result.append(src_range)
+    return result
 
 if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    maps = dict()
     text = text1
-    text = text.strip().splitlines()
+    text = text.strip().split('\n\n' if '\n\n' in text else '\n')
 
-    d = ""
-    seeds = []
-    for line in text:
-        if line.startswith("seeds"):
-            seeds = [int(x) for x in line.split(":")[1].split()]
-            continue
+    rules = parse(text)
 
-        if line.endswith("map:"):
-            d = line.split()[0]
-            # print(d)
-            continue
+    seeds = [(x, 1) for x in rules['seed']]
 
-        if not line:
-            d = ""
-            continue
-
-        record = tuple(int(x) for x in line.split())
-
-        if d:
-            # print(record)
-            if d not in maps:
-                maps[d] = list()
-            maps[d].append(record)
-
-    map_names = ["seed-to-soil"]
-    while len(map_names) < len(maps):
-        m = map_names[-1].split('-')[-1]
-        for name in maps:
-            if name.startswith(m):
-                map_names.append(name)
-
-    for name, map in maps.items():
-        maps[name] = translate_map(map)
-
-    print(seeds)
-    locations = []
-    for seed in seeds:
-        for map in map_names:
-            seed = proc_map(seed, maps[map])
-            # print(map, seed)
-        locations.append(seed)
-
-    pone = np.array(locations).min()
-
+    pone_seeds = map_all(seeds, rules)
+    pone = min(pone_seeds)[0]
     print(f"AOC {year} day {day}  Part One: {pone}")
 
-    seeds = list(zip(seeds[::2], seeds[1::2]))
-    print(seeds)
+    seeds = list(zip(rules['seed'][0::2], rules['seed'][1::2]))
+    ptwo_seeds = map_all(seeds, rules)
 
-
-
+    ptwo = min(ptwo_seeds)[0]
     print(f"AOC {year} day {day}  Part Two: {ptwo}")

@@ -10,7 +10,12 @@ from functools import lru_cache
 from scipy import ndimage
 from scipy.stats import false_discovery_control
 import pprint
+import os
 
+# Set authentication cookie
+os.environ["AOC_SESSION"] = "53616c7465645f5fab79c44c7f982d38658bd48d63738c835f50237a72e4bd37116d40298f569e78a54b57ef9f0900ed93e59bceaba192a48151ab8925f76c20"
+
+DEFAULT_TRANSLATE = {ord('1'): '#', ord('0'): '·'}
 
 def text_format(text, foreground=None, background=None, style=None):
     colors = {
@@ -70,21 +75,41 @@ def text_format(text, foreground=None, background=None, style=None):
 def show_string(screen, start=None, end=None, path=None, dist=None, translate=None):
     if translate is None:
         # zeros to centered dot (·), ones to hash (#).
-        translate = {ord('1'): ord('#'), ord('0'): ord('·')}
+        translate = DEFAULT_TRANSLATE
 
     # Convert to str array
-    arr = screen.astype(int).astype(str)
+    if np.issubdtype(screen.dtype, np.integer):
+        arr = screen.astype(int).astype(str)
 
-    # Translation from int values to characters
-    if translate:
-        arr = np.char.translate(arr, translate)
+        # Translation from int values to characters
+        if translate:
+            arr = np.char.translate(arr, translate)
 
-    start = {tuple(start)} if start else set()
-    end = {tuple(end)} if end else set()
+    else:
+        arr = screen.copy()
+
+    if not start:
+        start = set()
+    elif isinstance(start[0], tuple):
+        start = set([tuple(p) for p in start])
+    else:
+        start = {tuple(start)}
+
+    if not end:
+        end = set()
+    elif isinstance(end[0], tuple):
+        end = set([tuple(p) for p in end])
+    else:
+        end = {tuple(end)}
+
     path = set([tuple(p) for p in path]) - start - end if path else set()
 
+    pos_max_length = max(len(x) for x in arr.flatten())
+    if pos_max_length > 1:
+        pos_max_length += 1  # Add space between cols if data has multiple chars
+
     for p in start | end | path:
-        c = arr[p]
+        c = arr[p].rjust(pos_max_length)
         if p in start:
             _c = text_format(c, foreground='black', background='green', style='bold')
         elif p in end:
@@ -102,17 +127,27 @@ def show_string(screen, start=None, end=None, path=None, dist=None, translate=No
         pad = max(len(str(k)) for k in dist)
 
     w = len(str(arr.shape[0]))
-    result = f"{' ' * w} {''.join(str(s % 10) for s in range(screen.shape[1]))}"
+    result = f"{' ' * w} {''.join(f'{str(s % 10 ** pos_max_length):>{pos_max_length}}' for s in range(arr.shape[1]))}"
     for r in range(arr.shape[0]):
         # print(f"{r}", ''.join(screen[r].astype(str)).replace('0', '\u25AF').replace('1', '\u25AE'))
-        result += f"\n{str(r).rjust(w)} {''.join(arr[r])}"
+        # result += f"\n{str(r).rjust(w)} {''.join(arr[r])}"
+        result += f"\n{str(r).rjust(w)} {''.join(f'{c:>{pos_max_length}}' for c in arr[r])}"
 
     return result
 
 
 def show(screen, start=None, end=None, path=None, dist=None, translate=None):
-    result = show_string(screen, start=start, end=end, path=path, dist=dist, translate=translate)
-    print(result)
+    if np.ndim(screen) <= 2:
+        result = show_string(screen, start=start, end=end, path=path, dist=dist, translate=translate)
+        print(result)
+        return
+
+    if screen.ndim == 3:
+        for s in screen:
+            print(show_string(s, start=start, end=end, path=path, dist=dist, translate=translate))
+        return
+
+    raise IndexError(f"Too many dimensions: {screen.ndim} > 3.")
 
 
 def map_from_text(text):
@@ -137,6 +172,9 @@ def valid_path(maze, start, end, paths=None, iters=-1, debug=False):
     pos_dist = {start: 0}
 
     max_moves = np.prod(maze.shape)
+
+    result_paths = []
+
     while True:
         for _ in range(len(paths)):
             path = paths.pop(0)
@@ -145,14 +183,14 @@ def valid_path(maze, start, end, paths=None, iters=-1, debug=False):
 
             pos = path[-1]
             for move in moves:
-                new_pos = pos + move
+                new_pos = pos + move  # type is np.array
                 new_pos_tuple = tuple(new_pos)
+                if (new_pos < 0).any() or (new_pos >= maze.shape).any():
+                    continue
                 if (new_pos == end).all():
                     pos_dist[new_pos_tuple] = len(path)  # len(path) includes the start point already, so no need to increment for the end point
-                    return path + [new_pos_tuple]
+                    return path + [new_pos_tuple], pos_dist
                 if new_pos_tuple in pos_dist:  # Shorter path to this point already exists
-                    continue
-                if (new_pos < 0).any() or (new_pos >= maze.shape).any():
                     continue
                 if maze[new_pos_tuple] == 0:
                     paths.append(path + [new_pos_tuple])
@@ -170,6 +208,11 @@ def valid_path(maze, start, end, paths=None, iters=-1, debug=False):
 
 def areas(maze):
     return ndimage.label(maze < 1)
+
+
+def in_array(pos, arr):
+    p = np.array(pos)
+    return (p >= 0).all() and (p < arr.shape).all()
 
 
 @lru_cache
@@ -199,7 +242,7 @@ def factor(n):
 def is_prime(n):
     if n < 2:
         return False
-    return max(factor(n).values()) == 1
+    return len(factor(n)) == 1
 
 
 class BigInt():

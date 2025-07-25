@@ -26,7 +26,7 @@ if __name__ == '__main__':
     area = np.array([[c for c in line] for line in text])
     start = tuple(np.asarray(np.where(area=='S')).T.flatten())
     pos = start
-    dirs = np.array(((0, 1), (1, 0), (0, -1), (-1, 0)))
+    DIRS = np.array(((0, 1), (1, 0), (0, -1), (-1, 0)))
 
     path = [start]
     while True:
