@@ -66,9 +66,9 @@ def run():
         # If any point is assigned to cluster zero, then calculate total distance for the current cluster point
         # AND calculate a new cluster center to evaluate
         if any(g0_flag):
-            d0 = np.sum(d0s[i] for i in lenz if g0_flag[i])
-            x0 = np.mean([z[i, 0] for i in lenz if g0_flag[i]])
-            y0 = np.mean([z[i, 1] for i in lenz if g0_flag[i]])
+            d0 = np.sum(np.fromiter((d0s[i] for i in lenz if g0_flag[i]), dtype=np.float64))
+            x0 = np.mean(np.fromiter((z[i, 0] for i in lenz if g0_flag[i]), dtype=np.float64))
+            y0 = np.mean(np.fromiter((z[i, 1] for i in lenz if g0_flag[i]), dtype=np.float64))
         else:
             # If no points are in cluster zero, then total distance is zero
             # AND there is no data to justify a new cluster center
