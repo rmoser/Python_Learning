@@ -1,4 +1,4 @@
-def getLongestString(s):
+def get_ordered_string(s):
     result = ''
     pstart = 0
     pend = 1
@@ -18,6 +18,6 @@ def getLongestString(s):
         print(i, pstart, pend, s[pstart:pend], r, result, len(r), len(result))
     return result
 
-print(getOrderedStrings('abcammvcba'))
-print(getOrderedStrings('ycuspehyyexibwddddh'))
+print(get_ordered_string('abcammvcba'))
+print(get_ordered_string('ycuspehyyexibwddddh'))
 
