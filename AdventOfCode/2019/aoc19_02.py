@@ -37,7 +37,8 @@ if __name__ == '__main__':
     if '\n' in text:
         test = text.splitlines()
 
-    arr = [int(x) for x in text.split(',')]
+    arr_init = [int(x) for x in text.split(',')]
+    arr = arr_init.copy()
     arr[1] = 12
     arr[2] = 2
 
@@ -49,23 +50,20 @@ if __name__ == '__main__':
 
     result = 0
     v = 0
-
     for n in range(1000):
-        arr = [int(x) for x in text.split(',')]
+        arr = arr_init.copy()
         arr[1:3] = [n, v]
         result = intcode(arr)
 
-        print(n, v, result)
         if result > ans:
             n -= 1
             break
 
     for v in range(1000):
-        arr = [int(x) for x in text.split(',')]
+        arr = arr_init.copy()
         arr[1:3] = [n, v]
         result = intcode(arr)
 
-        print(n, v, result)
         if result == ans:
             break
 
