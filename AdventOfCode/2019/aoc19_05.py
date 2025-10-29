@@ -52,14 +52,12 @@ def intcode(input_value, arr):
 
                 if a_mode:
                     raise ReferenceError(f"Invalid a_mode: {a_mode} in {inst}")
-                # TODO: Store Input to arr[a]
                 # print(f'op {op}: Stor {input_value} => {a}')
                 arr[a] = input_value
                 i += 2
                 pass
 
             case 4:
-                # TODO: Output from arr[a]
                 a = arr[i+1]
                 # print(f'\tA {a_mode}: {a}')
 
@@ -130,8 +128,6 @@ def intcode(input_value, arr):
                 raise IndexError(f"Invalid opcode {op}")
 
     return outputs
-    # print(arr)
-    return arr[0]
 
 
 if __name__ == '__main__':
