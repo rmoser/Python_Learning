@@ -11,6 +11,10 @@ text1 = aocd.get_data(day=day, year=year)
 
 
 def intcode(input_value, arr):
+    arr = arr.copy()
+    if not isinstance(input_value, (tuple, list)):
+        input_value = (input_value, )
+    input_index = 0
     i = 0
     outputs = []
     while True:
@@ -46,18 +50,19 @@ def intcode(input_value, arr):
                 arr[c] = a * b
                 i += 4
 
-            case 3:
+            case 3:  # Input
                 a = arr[i+1]
                 # print(f'\tA {a_mode}: {a}')
 
                 if a_mode:
                     raise ReferenceError(f"Invalid a_mode: {a_mode} in {inst}")
                 # print(f'op {op}: Stor {input_value} => {a}')
-                arr[a] = input_value
+                arr[a] = input_value[input_index]
+                input_index += 1
                 i += 2
                 pass
 
-            case 4:
+            case 4:  # Output
                 a = arr[i+1]
                 # print(f'\tA {a_mode}: {a}')
 
