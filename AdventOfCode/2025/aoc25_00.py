@@ -7,6 +7,7 @@ import aocd
 import os
 import utils
 from pprint import pprint
+from icecream import ic
 
 text0 = """
 """
