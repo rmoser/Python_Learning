@@ -9,6 +9,7 @@ colorama
 contourpy
 cycler
 fonttools
+icecream
 idna
 igraph
 kiwisolver
