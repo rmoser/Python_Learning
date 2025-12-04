@@ -307,6 +307,11 @@ class BigInt():
         _new.update()
         return _new
 
+def sum_neighbors(arr):
+    neighbors = np.ones(shape=(3,3), dtype=int)
+    neighbors[1,1] = 0
+    return sp.signal.convolve2d(arr, neighbors, mode='same', boundary='fill', fillvalue=0)
+
 
 if __name__ == '__main__':
     print("text_format(string):")
@@ -333,3 +338,7 @@ if __name__ == '__main__':
     b = a + 5
     c = a * b
 
+
+    a = np.array([[1,2,3],[4,5,6],[7,8,9]])
+    print(a)
+    print(sum_neighbors(a))
