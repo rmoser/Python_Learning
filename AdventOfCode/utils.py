@@ -13,7 +13,7 @@ import pprint
 import os
 
 # Set authentication cookie
-os.environ["AOC_SESSION"] = "53616c7465645f5fab79c44c7f982d38658bd48d63738c835f50237a72e4bd37116d40298f569e78a54b57ef9f0900ed93e59bceaba192a48151ab8925f76c20"
+# os.environ["AOC_SESSION"] = "53616c7465645f5fab79c44c7f982d38658bd48d63738c835f50237a72e4bd37116d40298f569e78a54b57ef9f0900ed93e59bceaba192a48151ab8925f76c20"
 
 DEFAULT_TRANSLATE = {ord('1'): '#', ord('0'): '·'}
 
