@@ -17,6 +17,72 @@ import os
 
 DEFAULT_TRANSLATE = {ord('1'): '#', ord('0'): '·'}
 
+class BigInt:
+    def __init__(self, value : (int, np.int32, np.int64, BigInt)):
+        if isinstance(value, BigInt):
+            self.value = value.value.copy()
+        else:
+            self.value = factor(value)
+        self.__repr = np.int64(0)
+        self.update()
+
+    def clean(self):
+        for k, v in self.value.items():
+            if v == 0:
+                self.value.pop(k)
+
+    def update(self):
+        self.clean()
+        self.__repr = np.power(list(self.value.keys()), list(self.value.values())).prod()
+
+    def __repr__(self) -> str:
+        return str(self.__repr)
+
+    def __str__(self) -> str:
+        return pprint.pformat(self.value)
+
+    def __copy__(self):
+        return BigInt(self)
+
+    def __int__(self) -> int:
+        return int(self.__repr)
+
+    def __int64__(self) -> np.int64:
+        return self.__repr
+
+    def __add__(self, other):
+        return BigInt(self.__repr + np.int64(other))
+
+    def __mul__(self, other : (int, np.int32, np.int64, BigInt)):
+        if isinstance(other, BigInt):
+            _value = other.value
+        else:
+            _value = factor(other)
+
+        _new = self.__copy__()
+        for k, v in _value.items():
+            _new.value[k] = _new.value.get(k, np.int64(0)) + v
+
+        _new.update()
+        return _new
+
+    def __floordiv__(self, other):
+        if isinstance(other, BigInt):
+            _value = other.value
+        else:
+            _value = factor(other)
+
+        _new = self.__copy__()
+        for k, v in _value.items():
+            _new.value[k] = _new.value.get(k, np.int64(0)) - v
+
+        _new.update()
+        return _new
+
+
+
+
+
 def text_format(text, foreground=None, background=None, style=None):
     colors = {
         None: 0,
@@ -245,67 +311,6 @@ def is_prime(n):
     return len(factor(n)) == 1
 
 
-class BigInt():
-    def __init__(self, value : (int, np.int32, np.int64, BigInt)):
-        if isinstance(value, BigInt):
-            self.value = value.value.copy()
-        else:
-            self.value = factor(value)
-        self.__repr = np.int64(0)
-        self.update()
-
-    def clean(self):
-        for k, v in self.value.items():
-            if v == 0:
-                self.value.pop(k)
-
-    def update(self):
-        self.clean()
-        self.__repr = np.power(list(self.value.keys()), list(self.value.values())).prod()
-
-    def __repr__(self) -> str:
-        return str(self.__repr)
-
-    def __str__(self) -> str:
-        return pprint.pformat(self.value)
-
-    def __copy__(self):
-        return BigInt(self)
-
-    def __int__(self) -> int:
-        return int(self.__repr)
-
-    def __int64__(self) -> np.int64:
-        return self.__repr
-
-    def __add__(self, other):
-        return BigInt(self.__repr + np.int64(other))
-
-    def __mul__(self, other : (int, np.int32, np.int64, BigInt)):
-        if isinstance(other, BigInt):
-            _value = other.value
-        else:
-            _value = factor(other)
-
-        _new = self.__copy__()
-        for k, v in _value.items():
-            _new.value[k] = _new.value.get(k, np.int64(0)) + v
-
-        _new.update()
-        return _new
-
-    def __floordiv__(self, other):
-        if isinstance(other, BigInt):
-            _value = other.value
-        else:
-            _value = factor(other)
-
-        _new = self.__copy__()
-        for k, v in _value.items():
-            _new.value[k] = _new.value.get(k, np.int64(0)) - v
-
-        _new.update()
-        return _new
 
 def sum_neighbors(arr):
     neighbors = np.ones(shape=(3,3), dtype=int)
