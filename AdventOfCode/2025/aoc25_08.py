@@ -86,20 +86,26 @@ def circuits(arr, n=None):
             ic(f"Removed {circuit_b} from {circuit}")
 
 
-    if n is None:
-        n = arr.shape[0]
-
     distance_matrix = np.full((arr.shape[0], arr.shape[0]), fill_value=np.inf)
 
     for a, b in it.combinations(range(arr.shape[0]), 2):
         distance_matrix[a, b] = sp.spatial.distance.euclidean(arr[a], arr[b])
 
-    for _ in range(n):
+    a, b = None, None  # Init
+    i = 0
+    while True:
+        i += 1
         a, b = divmod(distance_matrix.argmin(), arr.shape[0])
         connect(a, b)
         distance_matrix[a, b] = np.inf
+        if len(circuit) == 1 and len(circuit[0]) == arr.shape[0]:
+            ic("Part 2 Done!")
+            break
+        if n is not None and i >= n:
+            break
 
-    return circuit
+    return circuit, arr[a], arr[b]
+
 
 if __name__ == '__main__':
     pone = ''
@@ -111,12 +117,17 @@ if __name__ == '__main__':
     ic.disable()
 
     arr = np.array([[int(x) for x in line.split(',')] for line in _text])
-    c = circuits(arr, 10 if text == text0 else None)
+    c, a, b = circuits(arr, 10 if text == text0 else arr.shape[0])
     lens = np.array([len(x) for x in c])
     lens.sort()
     pone = lens[-3:].prod()
 
     ic(c)
+
+    c2, a, b = circuits(arr, None)
+    ic(c2, a, b)
+
+    ptwo = a[0] * b[0]
 
 
     print(f"AOC {year} day {day}  Part One: {pone}")
