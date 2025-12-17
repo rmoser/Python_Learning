@@ -98,7 +98,7 @@ def periodicity(ans_set):
 def min_max(ans_set) -> dict:
     ranges = dict()
     for s in ans_set.free_symbols:
-        ranges[s] = [0, 1000, 1]
+        ranges[s] = [0, np.inf, 1]
 
         for arg in ans_set.args[0]:
             if len(arg.free_symbols) == 1 and s in arg.free_symbols:
@@ -122,6 +122,8 @@ def min_max(ans_set) -> dict:
         v = p[1][i]
         if ranges[s][0] == 0:
             ranges[s][0] = v
+        if ranges[s][1] == np.inf:
+            ranges[s][1] = 100
 
     return ranges
 
@@ -136,8 +138,7 @@ def _optimize(ans_set):
 
     results = dict()
     if n_free_symbols == 0:
-        arr = np.array(ans_set.args[0])
-        if all_ints(arr) and (arr >= 0).all():
+        if check(ans_set):
             results[ans_set.args[0]] = sum(ans_set.args[0])
         return results
 
@@ -166,7 +167,7 @@ def _optimize(ans_set):
     ic(f'_optimize1-ing: {free_symbol} of {free_symbols}: {size}')
     for i in r:
         a = ans_set.subs(dict({free_symbol: i}))
-        print(a)
+        # print(a)
         results.update(_optimize(a))
 
     return results
@@ -181,10 +182,15 @@ def optimize(ans_set):
 
     return result
 
-def check(ans_set, machine):
-    _, buttons, joltage = machine
-    if not (buttons.T.dot(ans_set) == joltage).all():
-        return False
+def check(ans_set, machine=None):
+    if isinstance(ans_set, sy.sets.FiniteSet):
+        if len(ans_set.free_symbols):
+            return False
+        ans_set = tuple(ans_set.args[0])
+    if machine is not None:
+        _, buttons, joltage = machine
+        if not (buttons.T.dot(ans_set) == joltage).all():
+            return False
     a = np.array(ans_set)
     if not (a >= 0).all():
         return False
