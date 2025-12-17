@@ -1,6 +1,4 @@
 # Advent of Code
-from unittest import case
-
 year = 2025
 day = 10
 
@@ -13,6 +11,11 @@ from icecream import ic
 import itertools as it
 import sympy as sy
 import math
+from pathos.pools import ProcessPool
+
+MP = False
+
+# Disable system sleep mode while this script runs
 import ctypes
 ctypes.windll.kernel32.SetThreadExecutionState(0x80000001)
 
@@ -21,9 +24,6 @@ text0 = """[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}
 """
 text1 = aocd.get_data(day=day, year=year)
-
-ic.disable()
-
 
 def solve(goal, buttons, joltage):
     for i in range(1, len(buttons)+1):
@@ -35,7 +35,6 @@ def solve(goal, buttons, joltage):
             if (state == goal).all():
                 return len(group), group
     return 0
-
 
 def get_max(button, joltage):
     if not isinstance(joltage, np.ndarray):
@@ -59,10 +58,11 @@ def reduce(buttons, joltage):
 
     return ans, buttons
 
+
 def solve2(_, buttons, joltage):
     ans_set = _solve2(_, buttons, joltage)
-    return optimize(ans_set)[0]
-    return best_solution(ans_set)
+    return optimize(ans_set)
+
 
 def _solve2(_, buttons, joltage):
     b = buttons.T.astype(int)
@@ -95,31 +95,27 @@ def periodicity(ans_set):
 
     return step, offset
 
-def min_max(ans_set):
+def min_max(ans_set) -> dict:
     ranges = dict()
     for s in ans_set.free_symbols:
-        ranges[s] = [0, 100, 1]
+        ranges[s] = [0, 1000, 1]
 
         for arg in ans_set.args[0]:
             if len(arg.free_symbols) == 1 and s in arg.free_symbols:
                 i = sy.solve(arg, s)[0]
                 ic(arg, s, '=> ', i)
                 i1 = arg.subs(s, i+1)
-                ic("Old:", ranges[s])
-                if i1 > 0:
-                    # ranges[s][0] = max(ranges[s][0], math.ceil(i.evalf()))
-                    ranges[s][0] = max(ranges[s][0], i)
-                else:
-                    # ranges[s][1] = min(ranges[s][1], math.floor(i.evalf()))
-                    ranges[s][1] = min(ranges[s][1], i)
-                ic("New:", ranges[s])
-
-            # if s in arg.free_symbols and r'/' in str(arg):
-            #     for term in str(arg).split():
-            #         if str(s) + r'/' in term:
-            #             ic("Old:", ranges[s])
-            #             ranges[s][2] = int(term.split('/')[1])
-            #             ic("New:", ranges[s])
+                if i1 > 0 and i > ranges[s][0]:
+                        # New lower bound
+                        ic("Old:", ranges[s])
+                        # ranges[s][0] = max(ranges[s][0], math.ceil(i.evalf()))
+                        ranges[s][0] = i
+                        ic("New:", ranges[s])
+                elif i1 < 0 and i < ranges[s][1]:
+                        # New upper bound
+                        ic("Old:", ranges[s])
+                        ranges[s][1] = i
+                        ic("New:", ranges[s])
 
     p = periodicity(ans_set)
     for i, s in enumerate(ans_set.free_symbols):
@@ -130,35 +126,71 @@ def min_max(ans_set):
     return ranges
 
 
-def optimize(ans_set):
+def all_ints(arr):
+    return (arr % 1 == 0).all()
+
+
+def _optimize(ans_set):
     free_symbols = free_symbol_names(ans_set)
     n_free_symbols = len(free_symbols)
 
-    if n_free_symbols == 0:
-        return sum(ans_set.args[0]), ans_set.args[0]
-
     results = dict()
+    if n_free_symbols == 0:
+        arr = np.array(ans_set.args[0])
+        if all_ints(arr) and (arr >= 0).all():
+            results[ans_set.args[0]] = sum(ans_set.args[0])
+        return results
+
     ranges = min_max(ans_set)
-    size = 1 + max(x[1] for x in ranges.values())
-    if isinstance(size, sy.core.numbers.Number):
-        size = math.ceil(size.evalf())
+    size = np.inf
+    free_symbol = ''
+    r = None
+    for k, v in ranges.items():
+        s = 1+v[1]-v[0]
+        if s < size:
+            size = s
+            free_symbol = k
+            r = v
+    if free_symbol:
+        if r[0] % r[2] == 0:
+            r = np.arange(r[0], r[1] + 1, r[2])
+        else:
+            r = np.arange(r[0] - r[0]%r[2], r[1]+1, r[2])
 
-    ic(ans_set, size)
-    for i in it.product(range(size), repeat=n_free_symbols):
-        iter_vals = [math.ceil(x[1][0] + x[1][2] * x[0]) for x in zip(i, ranges.values())]
-        if all(x[0] > x[1][1] for x in zip(i, ranges.values())):
-            break
-        if any(x[0] > x[1][1] for x in zip(i, ranges.values())):
-            continue
+    # size = 1 + max(x[1] for x in ranges.values())
+    # if isinstance(size, sy.core.numbers.Number):
+    #     size = math.ceil(size.evalf())
 
-        # print(iter_vals)
-        result = ans_set.subs(dict(zip(free_symbols, iter_vals))).args[0]
-        if all(x >= 0 for x in result) and all(int(x) == x for x in result):
-            results[tuple(iter_vals)] = result
+    ic(ans_set, size, free_symbol)
 
-    sums = np.array([sum(x) for x in results.values()])
-    return sums.min(), ans_set.subs(dict(zip(ans_set.free_symbols, tuple(results.keys())[sums.argmin()]))).args[0]
+    ic(f'_optimize1-ing: {free_symbol} of {free_symbols}: {size}')
+    for i in r:
+        a = ans_set.subs(dict({free_symbol: i}))
+        print(a)
+        results.update(_optimize(a))
 
+    return results
+
+def optimize(ans_set):
+    results = _optimize(ans_set)
+    result = None
+    size = np.inf
+    for k, v in results.items():
+        if v < size:
+            result, size = k, v
+
+    return result
+
+def check(ans_set, machine):
+    _, buttons, joltage = machine
+    if not (buttons.T.dot(ans_set) == joltage).all():
+        return False
+    a = np.array(ans_set)
+    if not (a >= 0).all():
+        return False
+    if not ((a % 1) == 0).all():
+        return False
+    return True
 
 def score(ans_set, args):
     free_symbols = free_symbol_names(ans_set)
@@ -167,36 +199,15 @@ def score(ans_set, args):
     neg = 100 * sum((x if x<0 else 0 for x in vals)) ** 2
     ints = 100 * sum((x if int(x) != x else 0 for x in vals)) ** 2
     dist = sum((x**2 for x in vals))
-    return np.float(dist + neg + ints)
+    return float(dist + neg + ints)
 
 
-def best_solution(ans_set, size=10):
-    # TODO: Add check for ans_set.free_variables
-    free_symbols = free_symbol_names(ans_set)
-    n_free_symbols = len(free_symbols)
-
-    if n_free_symbols == 0:
-        return ans_set.args[0]
-
-    if n_free_symbols < 4:
-        size = size ** (5-n_free_symbols)
-    sums = np.full((size,) * n_free_symbols, fill_value=np.inf)
-
-    step, offset = periodicity(ans_set)
-
-    def calc_iter(i, step, offset):
-        return tuple(np.array(i) * step + offset)
-
-    for i in it.product(range(size), repeat=n_free_symbols):
-        _a = ans_set.subs(dict(zip(free_symbols, calc_iter(i, step, offset)))).args[0]
-        if min(_a) >= 0 and all(int(x) == x for x in _a):
-            sums[i] = sum(_a)
-
-    free_symbol_values = calc_iter(np.unravel_index(sums.argmin(), sums.shape), step, offset)
-    ans = ans_set.subs(dict(zip(free_symbols, free_symbol_values)))
-    return ans.args[0]
-
-
+def run(x):
+    a = solve2(*m)
+    ic.enable()
+    ic(z, a, check(a, m))
+    ic.disable()
+    return a
 
 
 if __name__ == '__main__':
@@ -222,13 +233,22 @@ if __name__ == '__main__':
 
     print(f"AOC {year} day {day}  Part One: {pone}")
 
-    ic.enable()
-    ptwo = 0
-    for z, m in enumerate(machines):
-        # ic.disable()
-        a = _solve2(*m)
-        s = optimize(a)
-        ic(z, a, s)
-        ptwo += s[0]
+    results = np.zeros(len(machines), dtype=int)
+    if True:
+        if MP:
+            pool = ProcessPool()
+            results = pool.imap(run, machines)
+
+        else:
+            # ic.enable()
+            ic.disable()
+            for z, m in enumerate(machines):
+                # a = _solve2(*m)
+                # s = optimize1(a)
+                a = run(m)
+                results[z] = sum(a)
+                # results[z] = sum(s)
+
+        ptwo = sum(results)
 
     print(f"AOC {year} day {day}  Part Two: {ptwo}")
