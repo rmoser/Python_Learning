@@ -86,12 +86,12 @@ def arr_in_list(arr, list):
     return any((a==arr).all() for a in list)
 
 def box_count(arr):
-    counts = np.bincount(arr[arr<tile_map_array.shape[0]], minlength=tile_map_array.shape[0])
+    counts = np.bincount(arr[np.bitwise_and(0 <= arr, arr<=tile_map_array.shape[0])], minlength=tile_map_array.shape[0])
     return tuple(counts.dot(tile_map_array).tolist())
 
 def is_valid(arr):
     # All values between 0 and num(tiles), inclusive
-    if not (0 <= arr.min() <= arr.max() <= tile_map_array.shape[0]):
+    if not (-1 <= arr.min() <= arr.max() <= tile_map_array.shape[0]):
         return False
 
     # Only one tile per coordinate
@@ -107,7 +107,7 @@ def is_solution(arr, tree):
         return False
     answer = np.array(tree[1])
     total = box_count(arr)
-    if not total.shape == answer.shape:
+    if not len(total) == answer.shape[0]:
         return False
     return (total == answer).all()
 
