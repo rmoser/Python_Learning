@@ -113,7 +113,6 @@ def is_solution(arr, tree):
 
 
 def calculate_placements(arr):
-    # TODO: Update for new arr structure
     size = (np.array(arr.shape) + (0, 2, 2)).tolist()
     _arr = init_arr(size)
 
@@ -151,6 +150,14 @@ def solve_tree(tree):
 
 
 def _solve_tree(arr, tree):
+    # Simple flow:
+    # 1. If no more tiles need to be placed, return True
+    # 2. Find the next open row and next tile to place
+    # 3. Loop through all valid placements, updating arr[row]
+    # 4.    Recursive call to self on arr
+    # 5. If we ran out of valid placements, return False
+    # Return the value of the recursive call
+
     tile_count = len(tiles)
     _box_count = sum(tree[1])  # Total number of boxes required for solution
 
