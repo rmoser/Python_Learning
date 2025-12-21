@@ -53,10 +53,12 @@ tiles = []
 tile_map = {}
 tile_map_reverse = {}
 tile_map_array = None
+tile_interference = None
+n_tiles = (0, 0)
 
 def init_tiles(boxes):
-    global tiles, tile_map, tile_map_array
-    tiles = []
+    global tiles, tile_map, tile_map_array, n_tiles
+    tiles = [init_arr((3,3), dtype=int)]  # tile value 0 represents an empty space
     tile_map = {}
     for box, tile in boxes.items():
         tile_map[box] = set()
@@ -68,30 +70,32 @@ def init_tiles(boxes):
                     tile_map_reverse[len(tiles) - 1] = box
             tile = np.rot90(tile)
 
+    n_tiles = (1, len(tiles))
     tile_map_array = np.zeros((len(tiles), len(boxes)), dtype=int)
     for b in range(len(boxes)):
         for t in tile_map[b]:
             tile_map_array[t, b] = 1
 
-    return tiles, tile_map, tile_map_array
+    spatial_interferences()
+    return tiles, tile_map, tile_map_array, tile_interference
 
 def init_arr(size=None, tree=None, dtype=np.int8):
     if size is None and tree is None:
         raise ValueError('size or tree must be specified')
     elif tree is not None:
         size = sum(tree[1]), tree[0][0]-2, tree[0][1]-2
-    return np.full(size, dtype=dtype, fill_value=-1)
+    return np.zeros(size, dtype=dtype)
 
 def arr_in_list(arr, list):
     return any((a==arr).all() for a in list)
 
 def box_count(arr):
-    counts = np.bincount(arr[np.bitwise_and(0 <= arr, arr<=tile_map_array.shape[0])], minlength=tile_map_array.shape[0])
+    counts = np.bincount(arr[np.bitwise_and(0 <= arr, arr<n_tiles[1])], minlength=n_tiles[1])
     return tuple(counts.dot(tile_map_array).tolist())
 
 def is_valid(arr):
     # All values between 0 and num(tiles), inclusive
-    if not (-1 <= arr.min() <= arr.max() <= tile_map_array.shape[0]):
+    if not (0 <= arr.min() <= arr.max() < n_tiles[1]):
         return False
 
     # Only one tile per coordinate
@@ -113,28 +117,51 @@ def is_solution(arr, tree):
 
 
 def calculate_placements(arr):
-    size = (np.array(arr.shape) + (0, 2, 2)).tolist()
+    size = (np.array(arr.shape) + (0, 2, 2)).tolist()  # add space to expand placement flag to the full tile 3x3 area
     _arr = init_arr(size)
 
-    for i, row in enumerate(arr):
-        tile_num = row.max()
-        if tile_num <= tile_map_array.shape[0]:
-            _arr[i] = sp.signal.convolve(row>=0, tiles[tile_num])
+    for r, row_data in enumerate(arr):
+        tile_num = row_data.max()
+        if 0 < tile_num < n_tiles[1]:
+            try:
+                _arr[r] = sp.signal.convolve(row_data>0, tiles[tile_num])
+            except IndexError:
+                ic(tile_num)
+                raise
     return _arr
+
+def spatial_interferences():
+    global tile_interference
+    tile_interference = np.full(shape=(n_tiles[1], 3, 3), dtype=object, fill_value=None)
+    tile_interference[0] = set(range(*n_tiles))
+
+    offsets = ((0,1), (0,2), (1,0), (1,1), (1,2), (2,0), (2,1), (2,2))
+
+    for tile0 in range(*n_tiles):
+        tile_interference[(tile0, 0, 0)] = set()
+        for offset in offsets:
+            tile_interference[(tile0, ) + offset] = set()  # Init empty set
+            for tile1 in range(*n_tiles):
+                interference_arr = init_arr((2,3,3))
+                interference_arr[0,0,0] = tile0
+                interference_arr[(1,) + offset] = tile1
+                if is_valid(interference_arr):
+                    tile_interference[(tile0, ) + offset].add(tile1)
+
 
 def display_placements(arr):
     for i in np.array(list(zip(*np.where(arr)))).tolist():
         print(i, ":", arr[tuple(i)])
 
 
-def next_box(arr, tree):
-    remaining = box_count(arr) - tree[1]
+def select_next_box(arr, tree):
+    remaining = np.array(box_count(arr)) - tree[1]
     return (remaining > 0).argmax()
 
 
 def solve_tree(tree):
     # Valid area for placements is 2 less, since each tile is 3x3
-    size = tuple((np.array(tree[0]) - 2).tolist())
+    size = tree[0][0]-2, tree[0][1]-2
 
     _box_count = sum(tree[1])  # Total number of boxes required for solution
 
@@ -145,8 +172,7 @@ def solve_tree(tree):
 
     if is_solution(arr, tree):
         return tuple(box_count(arr).tolist())
-    else:
-        return tuple()
+    return tuple()
 
 
 def _solve_tree(arr, tree):
@@ -158,19 +184,18 @@ def _solve_tree(arr, tree):
     # 5. If we ran out of valid placements, return False
     # Return the value of the recursive call
 
-    tile_count = len(tiles)
     _box_count = sum(tree[1])  # Total number of boxes required for solution
 
     nonempty_rows = np.where(arr)[0]
     row = (nonempty_rows.argmax()+1) if nonempty_rows.size else 0
 
-    for t in range(tile_count):
+    for t in range(*n_tiles):
         row[t] = 1
 
 
-    for tile_num in range(len(tiles)):
+    for tile_num in range(*n_tiles):
         for t in tile_map[tile_num]:
-            for iter_set in it.product(range(tile_count)):
+            for iter_set in it.product(range(*n_tiles)):
                 pass
 
     while True:
@@ -206,8 +231,8 @@ if __name__ == '__main__':
 
     tree = trees[0]
     arr = init_arr(tree=tree)
-    arr[0,0,0] = 22
-    arr[1,1,1] = 23
+    arr[0,0,0] = 23
+    arr[1,1,1] = 24
 
     ic(is_valid(arr))
     ic(is_solution(arr, tree))
