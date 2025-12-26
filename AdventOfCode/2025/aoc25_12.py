@@ -76,7 +76,7 @@ def init_tiles(boxes):
         for t in tile_map[b]:
             tile_map_array[t, b] = 1
 
-    spatial_interferences()
+    init_spatial_interferences()
     return tiles, tile_map, tile_map_array, tile_interference
 
 def init_arr(size=None, tree=None, dtype=np.int8):
@@ -130,7 +130,7 @@ def calculate_placements(arr):
                 raise
     return _arr
 
-def spatial_interferences():
+def init_spatial_interferences():
     global tile_interference
     tile_interference = np.full(shape=(n_tiles[1], 3, 3), dtype=object, fill_value=None)
     tile_interference[0] = set(range(*n_tiles))
@@ -149,10 +149,99 @@ def spatial_interferences():
                     tile_interference[(tile0, ) + offset].add(tile1)
 
 
+
+class TileMap:
+    def __init__(self, tree):
+        self.tree = tree
+        self.size = tree[0][0]-2, tree[0][1]-2
+        self.ans = tree[1]
+
+        self.arr = np.empty(self.size, dtype=object)
+        for i in np.ndindex(self.arr.shape):
+            self.arr[i] = set(range(*n_tiles))
+
+    def __repr__(self):
+        s = f'{tree}\n\n'
+        for row in np.arange(self.arr.shape[0]):
+            s += ' '.join((f"{str(next(iter(t))) if len(t) == 1 else '..':>2}" for t in self.arr[row])) + '\n'
+        return s
+
+    def __getitem__(self, item):
+        s = self.arr[item]
+        if len(s) == 1:
+            return next(iter(s))
+        else:
+            return s
+
+    def __setitem__(self, key, value):
+        if isinstance(key, tuple) and len(key) == 2:
+            if isinstance(value, set):
+                self.arr[key] = value
+            elif value == 0:
+                self.arr[key] = set(range(*n_tiles))
+            else:
+                self.arr[key] = {value}
+        else:
+            raise IndexError(f'{key} is not a valid index')
+
+
+    def add_tile(self, tile: int, pos: tuple[int, int]):
+        if not tile in self.arr[pos]:
+            raise ValueError(f"Tile {tile} does not fit at {pos}")
+
+        # Insert tile at pos
+        self.arr[pos] = {tile}
+        self.update(pos)
+
+
+    def remove_tile(self, pos: tuple[int, int]):
+        self.arr[pos] = set(range(*n_tiles))
+        self.update(pos)
+
+
+    # Update affected nearby positions
+    def update(self, pos: tuple[int, int]) -> bool:
+        tile = self.get(pos)
+
+        if isinstance(tile, set):
+            return False
+
+        interference = tile_interference[tile]
+
+        # Apply tile[pos] constraints to 3x3 area
+        for row_offset in np.arange(0, pos[0]-max(pos[0]+3, self.size[0])):
+            for col_offset in np.arange(0, pos[1]-max(pos[1]+3, self.size[1])):
+                _pos = pos[0] + row_offset, pos[1] + col_offset
+                self.arr[_pos] &= interference[row_offset, col_offset]
+
+        return True
+
+
+def calculate_interferences(arr, interference_arr=None):
+    # _arr = calculate_placements(arr).sum(axis=0)
+    _arr = arr.sum(axis=0)  # Collapse
+    if interference_arr is None:
+        pass
+        # interference_arr = init_interference_array(_arr)
+
+    for i in zip(*_arr.nonzero()):
+        tile = _arr[i]
+        interference = tile_interference[tile]
+        for offset in np.ndindex(interference_arr.shape):
+            pos = i[0] + offset[0], i[1] + offset[1]
+            if pos[0] < interference_arr.shape[0] and pos[1] < interference_arr.shape[1]:
+                interference_arr[pos] &= interference[offset]
+
+    return interference_arr
+
+
+
 def display_placements(arr):
     for i in np.array(list(zip(*np.where(arr)))).tolist():
         print(i, ":", arr[tuple(i)])
 
+def render(arr):
+    return calculate_placements(arr).sum(axis=0)
 
 def select_next_box(arr, tree):
     remaining = np.array(box_count(arr)) - tree[1]
@@ -186,21 +275,29 @@ def _solve_tree(arr, tree):
 
     _box_count = sum(tree[1])  # Total number of boxes required for solution
 
+    # Check for done
+    if _box_count == 0:
+        return True
+
+    # Find next row to add a tile
     nonempty_rows = np.where(arr)[0]
     row = (nonempty_rows.argmax()+1) if nonempty_rows.size else 0
 
-    for t in range(*n_tiles):
-        row[t] = 1
+    # Check for out of rows
+    if row >= arr.size[0]:
+        return False
 
+    # Map possible locations for placing a tile
+    box = np.where(tree[1])[0].max()
+    for t in tile_map[box]:
+        for position in it.product(range(*n_tiles)):
+            pass
 
     for tile_num in range(*n_tiles):
         for t in tile_map[tile_num]:
             for iter_set in it.product(range(*n_tiles)):
                 pass
 
-    while True:
-        pass
-        break
 
 
 if __name__ == '__main__':
@@ -227,15 +324,11 @@ if __name__ == '__main__':
 
     init_tiles(boxes)
 
-    tile_arr = np.array(tiles, dtype=int)
-
     tree = trees[0]
-    arr = init_arr(tree=tree)
-    arr[0,0,0] = 23
-    arr[1,1,1] = 24
+    tm = TileMap(tree)
+    tm[0,0] = 23
+    print(tm)
 
-    ic(is_valid(arr))
-    ic(is_solution(arr, tree))
 
 
 
