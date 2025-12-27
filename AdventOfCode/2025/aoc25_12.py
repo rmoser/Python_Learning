@@ -1,5 +1,4 @@
 # Advent of Code
-from sympy import false
 
 year = 2025
 day = 12
@@ -49,6 +48,7 @@ text0 = """0:
 """
 text1 = aocd.get_data(day=day, year=year)
 
+boxes = []
 tiles = []
 tile_map = {}
 tile_map_reverse = {}
@@ -58,8 +58,8 @@ n_tiles = (0, 0)
 
 def init_tiles(boxes):
     global tiles, tile_map, tile_map_array, n_tiles
-    tiles = [init_arr((3,3), dtype=int)]  # tile value 0 represents an empty space
-    tile_map = {}
+    tiles = [np.zeros((3,3), dtype=int)]  # tile value 0 represents an empty space
+    tile_map = {0: 0}
     for box, tile in boxes.items():
         tile_map[box] = set()
         for _ in range(4):
@@ -138,7 +138,7 @@ def init_spatial_interferences():
     offsets = ((0,1), (0,2), (1,0), (1,1), (1,2), (2,0), (2,1), (2,2))
 
     for tile0 in range(*n_tiles):
-        tile_interference[(tile0, 0, 0)] = set()
+        tile_interference[(tile0, 0, 0)] = {tile0}
         for offset in offsets:
             tile_interference[(tile0, ) + offset] = set()  # Init empty set
             for tile1 in range(*n_tiles):
@@ -162,8 +162,9 @@ class TileMap:
 
     def __repr__(self):
         s = f'{tree}\n\n'
-        for row in np.arange(self.arr.shape[0]):
-            s += ' '.join((f"{str(next(iter(t))) if len(t) == 1 else '..':>2}" for t in self.arr[row])) + '\n'
+        s += utils.show_string(self.tiles())
+        # for row in np.arange(self.arr.shape[0]):
+        #     s += ' '.join((f"{str(next(iter(t))) if len(t) == 1 else '..':>2}" for t in self.arr[row])) + '\n'
         return s
 
     def __getitem__(self, item):
@@ -191,13 +192,42 @@ class TileMap:
 
         # Insert tile at pos
         self.arr[pos] = {tile}
-        self.update(pos)
+        self.refresh()
+        # self.update(pos)
 
 
     def remove_tile(self, pos: tuple[int, int]):
         self.arr[pos] = set(range(*n_tiles))
-        self.update(pos)
+        # self.update(pos)
+        self.refresh()
 
+
+    # Scan the entire array and apply constraints
+    def refresh(self):
+        _arr = np.empty_like(self.arr)
+        for i in np.ndindex(self.arr.shape):
+            _arr[i] = set(range(*n_tiles))
+
+        for i in np.ndindex(self.arr.shape):
+            s = self[i]
+            if isinstance(s, int):
+                interference = tile_interference[s]
+                for j in np.ndindex(interference.shape):
+                    p = i[0] + j[0], i[1] + j[1]
+                    if p[0] >= _arr.shape[0] or p[1] >= _arr.shape[1]:
+                        continue
+                    _arr[p] &= interference[j]
+        self.arr = _arr
+
+    def calculate_placements(self):
+        _arr = np.zeros(self.tree[0], dtype=int)
+
+        for i in np.ndindex(self.arr.shape):
+            s = self[i]
+            if isinstance(s, int):
+                tile = tiles[s]
+                _arr[i[0]:i[0]+3, i[1]:i[1]+3] += tile
+        return _arr
 
     # Update affected nearby positions
     def update(self, pos: tuple[int, int]) -> bool:
@@ -216,6 +246,35 @@ class TileMap:
 
         return True
 
+    def box_count(self):
+        return np.bincount(self.boxes().flatten(), minlength=len(self.ans)+1)[:-1]
+
+    def tiles(self):
+        return np.vectorize(lambda x: next(iter(x)) if len(x) == 1 else 0)(self.arr)
+
+    def boxes(self):
+        return np.vectorize(lambda x: tile_map_reverse[x] if x>0 else len(self.ans))(self.tiles())
+
+    def is_valid(self):
+        # All values between 0 and num(tiles), inclusive
+        # if not (0 <= self.arr.min() <= self.arr.max() < n_tiles[1]):
+        #     return False
+
+        # Only one tile per coordinate
+        _arr = self.calculate_placements()
+        if not (0 <= _arr.min() <= _arr.max() <= 1).all():
+            return False  # Tiles overlap
+        return True
+
+
+    def is_solution(self):
+        if not self.is_valid():
+            return False
+        answer = self.ans
+        total = self.box_count()
+        if not len(total) == len(answer):
+            return False
+        return (total == answer).all()
 
 def calculate_interferences(arr, interference_arr=None):
     # _arr = calculate_placements(arr).sum(axis=0)
