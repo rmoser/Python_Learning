@@ -138,7 +138,7 @@ def init_spatial_interferences():
     offsets = ((0,1), (0,2), (1,0), (1,1), (1,2), (2,0), (2,1), (2,2))
 
     for tile0 in range(*n_tiles):
-        tile_interference[(tile0, 0, 0)] = {tile0}
+        tile_interference[(tile0, 0, 0)] = set()
         for offset in offsets:
             tile_interference[(tile0, ) + offset] = set()  # Init empty set
             for tile1 in range(*n_tiles):
@@ -151,6 +151,18 @@ def init_spatial_interferences():
 
 
 class TileMap:
+    @staticmethod
+    def compare(a, b):
+        if isinstance(a, int):
+            if isinstance(b, int):
+                return a == b
+            else:
+                return a in b
+        if isinstance(b, int):
+            return b in a
+        return bool(a & b)
+
+
     def __init__(self, tree):
         self.tree = tree
         self.size = tree[0][0]-2, tree[0][1]-2
@@ -167,31 +179,27 @@ class TileMap:
         #     s += ' '.join((f"{str(next(iter(t))) if len(t) == 1 else '..':>2}" for t in self.arr[row])) + '\n'
         return s
 
-    def __getitem__(self, item):
-        s = self.arr[item]
-        if len(s) == 1:
-            return next(iter(s))
-        else:
-            return s
+    def __getitem__(self, pos):
+        if isinstance(pos, tuple) and len(pos) == 2:
+            return self.arr[pos]
+        raise IndexError(f'{pos} is not a valid index')
 
-    def __setitem__(self, key, value):
-        if isinstance(key, tuple) and len(key) == 2:
-            if isinstance(value, set):
-                self.arr[key] = value
-            elif value == 0:
-                self.arr[key] = set(range(*n_tiles))
-            else:
-                self.arr[key] = {value}
+    def __setitem__(self, pos, value):
+        if not isinstance(pos, tuple) and len(pos) == 2:
+            raise IndexError(f'{pos} is not a valid index')
+        if isinstance(value, set):
+            self.arr[pos] = value
+        elif value == 0:
+            self.arr[pos] = set(range(*n_tiles))
         else:
-            raise IndexError(f'{key} is not a valid index')
-
+            self.arr[pos] = value
 
     def add_tile(self, tile: int, pos: tuple[int, int]):
         if not tile in self.arr[pos]:
             raise ValueError(f"Tile {tile} does not fit at {pos}")
 
         # Insert tile at pos
-        self.arr[pos] = {tile}
+        self.arr[pos] = tile
         self.refresh()
         # self.update(pos)
 
@@ -204,15 +212,19 @@ class TileMap:
 
     # Scan the entire array and apply constraints
     def refresh(self):
+        # Init
         _arr = np.empty_like(self.arr)
         for i in np.ndindex(self.arr.shape):
             _arr[i] = set(range(*n_tiles))
 
         for i in np.ndindex(self.arr.shape):
-            s = self[i]
+            s = self.arr[i]
             if isinstance(s, int):
+                _arr[i] = s
                 interference = tile_interference[s]
                 for j in np.ndindex(interference.shape):
+                    if j == (0, 0):
+                        continue
                     p = i[0] + j[0], i[1] + j[1]
                     if p[0] >= _arr.shape[0] or p[1] >= _arr.shape[1]:
                         continue
@@ -223,7 +235,7 @@ class TileMap:
         _arr = np.zeros(self.tree[0], dtype=int)
 
         for i in np.ndindex(self.arr.shape):
-            s = self[i]
+            s = self.arr[i]
             if isinstance(s, int):
                 tile = tiles[s]
                 _arr[i[0]:i[0]+3, i[1]:i[1]+3] += tile
@@ -231,7 +243,7 @@ class TileMap:
 
     # Update affected nearby positions
     def update(self, pos: tuple[int, int]) -> bool:
-        tile = self.get(pos)
+        tile = self.arr[pos]
 
         if isinstance(tile, set):
             return False
@@ -241,21 +253,56 @@ class TileMap:
         # Apply tile[pos] constraints to 3x3 area
         for row_offset in np.arange(0, pos[0]-max(pos[0]+3, self.size[0])):
             for col_offset in np.arange(0, pos[1]-max(pos[1]+3, self.size[1])):
+                if row_offset == 0 and col_offset == 0:
+                    continue
                 _pos = pos[0] + row_offset, pos[1] + col_offset
                 self.arr[_pos] &= interference[row_offset, col_offset]
 
         return True
 
-    def box_count(self):
+    def _update(self, this: tuple[int, int], other: tuple[int, int]):
+        if this == other:
+            return
+
+        this_tile = self.arr[this]
+        other_tile = self.arr[other]
+
+        if isinstance(this_tile, int):
+            # Check for other tile's impact on this tile
+            _arr = self.arr[other[0]:this[0] + 1, other[1]:this[1] + 1].view()
+            if _arr.shape > (1,1):
+                offset = (_arr.shape[0]-1, _arr.shape[1]-1)
+                # If other tile is fixed, then we already checked validity before placing pos tile
+                if isinstance(other_tile, set):
+                    for i in list(other_tile):
+                        if this_tile not in tile_interference[i][offset]:
+                            # Remove tiles from other tile set, IFF this tile's placement makes them invalid options
+                            other_tile.remove(i)
+
+            # Check for pos tile's impact on other tile
+            _arr = self.arr[this[0]:other[0] + 1, this[1]:other[1] + 1].view()
+            if _arr.shape > (1,1):
+                offset = (_arr.shape[0]-1, _arr.shape[1]-1)
+                # this tile impacts other tile IFF this tile is fixed
+                if isinstance(this, int):
+                    self.arr[other] &= tile_interference[this][offset]
+
+
+        if isinstance(this_tile, set):
+            pass
+
+    def box_count(self) -> np.ndarray:
         return np.bincount(self.boxes().flatten(), minlength=len(self.ans)+1)[:-1]
 
-    def tiles(self):
-        return np.vectorize(lambda x: next(iter(x)) if len(x) == 1 else 0)(self.arr)
+    def tiles(self, arr=None) -> np.ndarray:
+        if arr is None:
+            arr = self.arr
+        return np.vectorize(lambda x: x if isinstance(x, int) else 0)(arr)
 
-    def boxes(self):
+    def boxes(self) -> np.ndarray:
         return np.vectorize(lambda x: tile_map_reverse[x] if x>0 else len(self.ans))(self.tiles())
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         # All values between 0 and num(tiles), inclusive
         # if not (0 <= self.arr.min() <= self.arr.max() < n_tiles[1]):
         #     return False
@@ -267,7 +314,7 @@ class TileMap:
         return True
 
 
-    def is_solution(self):
+    def is_solution(self) -> bool:
         if not self.is_valid():
             return False
         answer = self.ans
@@ -276,12 +323,12 @@ class TileMap:
             return False
         return (total == answer).all()
 
-def calculate_interferences(arr, interference_arr=None):
+
+def calculate_interferences(arr, interference_arr=None) -> np.ndarray:
     # _arr = calculate_placements(arr).sum(axis=0)
     _arr = arr.sum(axis=0)  # Collapse
     if interference_arr is None:
-        pass
-        # interference_arr = init_interference_array(_arr)
+        interference_arr = np.empty_like(_arr)
 
     for i in zip(*_arr.nonzero()):
         tile = _arr[i]
