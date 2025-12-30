@@ -242,54 +242,46 @@ class TileMap:
         return _arr
 
     # Update affected nearby positions
-    def update(self, pos: tuple[int, int]) -> bool:
-        tile = self.arr[pos]
+    def update(self, pos: tuple[int, int]):
+        for other_pos in it.product(
+                np.arange(max(0, pos[0]-2), min(self.size[0], pos[0]+3)),
+                np.arange(max(0, pos[1]-2), min(self.size[1], pos[1]+3))
+        ):
+            ic(pos, other_pos)
+            self._update(pos, other_pos)
 
-        if isinstance(tile, set):
-            return False
-
-        interference = tile_interference[tile]
-
-        # Apply tile[pos] constraints to 3x3 area
-        for row_offset in np.arange(0, pos[0]-max(pos[0]+3, self.size[0])):
-            for col_offset in np.arange(0, pos[1]-max(pos[1]+3, self.size[1])):
-                if row_offset == 0 and col_offset == 0:
-                    continue
-                _pos = pos[0] + row_offset, pos[1] + col_offset
-                self.arr[_pos] &= interference[row_offset, col_offset]
-
-        return True
-
-    def _update(self, this: tuple[int, int], other: tuple[int, int]):
+    def _update(self, this: tuple[int, int], other: tuple[int, int]) -> bool:
         if this == other:
-            return
+            return False
 
         this_tile = self.arr[this]
         other_tile = self.arr[other]
 
-        if isinstance(this_tile, int):
-            # Check for other tile's impact on this tile
-            _arr = self.arr[other[0]:this[0] + 1, other[1]:this[1] + 1].view()
-            if _arr.shape > (1,1):
-                offset = (_arr.shape[0]-1, _arr.shape[1]-1)
-                # If other tile is fixed, then we already checked validity before placing pos tile
-                if isinstance(other_tile, set):
-                    for i in list(other_tile):
-                        if this_tile not in tile_interference[i][offset]:
-                            # Remove tiles from other tile set, IFF this tile's placement makes them invalid options
-                            other_tile.remove(i)
+        if isinstance(this_tile, int) and isinstance(other_tile, int):
+            return False
 
-            # Check for pos tile's impact on other tile
+        if isinstance(this_tile, set) and isinstance(other_tile, set):
+            return False
+
+        if isinstance(this_tile, int):
+            # Check for this tile's impact on other tiles
             _arr = self.arr[this[0]:other[0] + 1, this[1]:other[1] + 1].view()
-            if _arr.shape > (1,1):
+            if _arr.shape > (0,0):  # other tile is below or right of this tile
                 offset = (_arr.shape[0]-1, _arr.shape[1]-1)
                 # this tile impacts other tile IFF this tile is fixed
-                if isinstance(this, int):
-                    self.arr[other] &= tile_interference[this][offset]
+                other_tile &= tile_interference[this_tile][offset]
+                return True
 
+        else:  # other_tile is int
+            # Check for other tile's impact on this tile
+            _arr = self.arr[other[0]:this[0] + 1, other[1]:this[1] + 1].view()
+            if _arr.shape > (0,0):  # other tile is above or left of this tile
+                offset = (_arr.shape[0]-1, _arr.shape[1]-1)
+                this_tile &= tile_interference[other_tile][offset]
+                return True
 
-        if isinstance(this_tile, set):
-            pass
+        return False
+
 
     def box_count(self) -> np.ndarray:
         return np.bincount(self.boxes().flatten(), minlength=len(self.ans)+1)[:-1]
