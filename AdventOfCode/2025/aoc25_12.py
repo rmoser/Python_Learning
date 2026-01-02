@@ -132,18 +132,19 @@ def calculate_placements(arr):
 
 def init_spatial_interferences():
     global tile_interference
-    tile_interference = np.full(shape=(len(tiles), 3, 3), dtype=object, fill_value=None)
+    tile_interference = np.full(shape=(len(tiles), 5, 5), dtype=object, fill_value=None)
     tile_interference[0] = set(range(len(tiles)))
 
-    offsets = ((0,1), (0,2), (1,0), (1,1), (1,2), (2,0), (2,1), (2,2))
+    offsets = list(it.product(range(5), repeat=2))
+    offsets.remove((2,2))  # Remove center of 5x5 grid, where tile is placed
 
     for tile0 in range(1, len(tiles)):
-        tile_interference[(tile0, 0, 0)] = {tile0}
+        tile_interference[(tile0, 2, 2)] = {tile0}
         for offset in offsets:
-            tile_interference[(tile0, ) + offset] = set()  # Init empty set
+            tile_interference[(tile0, ) + offset] = {0}  # Init empty set
             for tile1 in range(1, len(tiles)):
-                interference_arr = init_arr((2,3,3))
-                interference_arr[0,0,0] = tile0
+                interference_arr = init_arr((2,5,5))
+                interference_arr[0,2,2] = tile0
                 interference_arr[(1,) + offset] = tile1
                 if is_valid(interference_arr):
                     tile_interference[(tile0, ) + offset].add(tile1)
@@ -164,19 +165,22 @@ class TileMap:
 
     def __init__(self, tree):
         self.tree = tree
-        self.size = tree[0][0]-2, tree[0][1]-2
+        self.size = tree[0][0]+2, tree[0][1]+2
         self.ans = tree[1]
+        self.budget = list(self.ans)
 
-        self.arr = np.empty(self.size, dtype=object)
-        for i in np.ndindex(self.arr.shape):
-            self.arr[i] = set(range(len(tiles)))
-
+        self.arr = np.fromfunction(np.vectorize(lambda i, j: set()), self.size) | set(range(len(tiles)))
+        self.arr[:2] &= {0}
+        self.arr[-2:] &= {0}
+        self.arr[:,:2] &= {0}
+        self.arr[:,-2:] &= {0}
         self.arr_placements = np.zeros_like(self.arr, dtype=int)
+        self.refresh()
 
 
     def __repr__(self):
-        s = f'{tree}\n\n'
-        s += utils.show_string(self.tiles())
+        s = f'{self.tree}\n\n'
+        s += utils.show_string(self.tiles(), translate={48: '·'})
         # for row in np.arange(self.arr.shape[0]):
         #     s += ' '.join((f"{str(next(iter(t))) if len(t) == 1 else '..':>2}" for t in self.arr[row])) + '\n'
         return s
@@ -197,7 +201,7 @@ class TileMap:
             self.arr[pos] = value
 
     def window(self, pos):
-        return self.arr[pos[0]:pos[0]+3, pos[1]:pos[1]+3].view()
+        return self.arr[pos[0]-2:pos[0]+3, pos[1]-2:pos[1]+3].view()
 
     def add_tile(self, tile: int, pos: tuple[int, int]):
         if not tile in self.arr[pos]:
@@ -205,55 +209,84 @@ class TileMap:
 
         # Insert tile at pos
         self.arr_placements[pos] = tile
+        self.budget[tile_map_reverse[tile]] -= 1
 
-        a = self.window(pos)
-        b = tile_interference[tile][:a.shape[0], :a.shape[1]]
-        a &= b
+        # a = self.window(pos)
+        # b = tile_interference[tile][:a.shape[0], :a.shape[1]]
+        # a &= b
 
         # self.refresh()
-        # self.update(pos)
+        self.update(pos)
 
 
     def remove_tile(self, pos: tuple[int, int]):
-        self.arr[pos] = set(range(len(tiles)))
+        tile = self.arr_placements[pos]
+        self.arr_placements[pos] = 0
+        self.budget[tile_map_reverse[tile]] += 1
+
+        # Reset self.arr for affected range
+        for r in range(max(2, pos[0]-2), min(pos[0]+3, self.arr.shape[0]-2)):
+            for c in range(max(2, pos[1]-2), min(pos[1]+3, self.arr.shape[1]-2)):
+                if self.arr_placements[r,c] == 0:
+                    self.arr[r, c] = set(range(len(tiles)))
+        # Reapply constraints
+        for p in zip(*self.arr_placements.nonzero()):
+            if pos[0]-4 <= p[0] <= pos[0]+2 and pos[1]-4 <= p[1] <= pos[1]+2:
+                self.update(p)
+        # for p in np.ndindex(self.window(pos).shape):
+        #     self.arr[p] = set(range(len(tiles)))
         # self.update(pos)
-        self.refresh()
+        # self.refresh()
 
 
     # Scan the entire array and apply constraints
     def refresh(self):
-        # Init
-        _arr = np.empty_like(self.arr)
+        # Re-init arr
         for i in np.ndindex(self.arr.shape):
-            _arr[i] = set(range(len(tiles)))
+            if i[0] < 2 or i[1] < 2:
+                self.arr[i] = {0}
+                continue
+            if i[0] > self.arr.shape[0]-3 or i[1] > self.arr.shape[1]-3:
+                self.arr[i] = {0}
+                continue
+            self.arr[i] = set(range(len(tiles)))
 
-        for i in np.ndindex(self.arr.shape):
-            s = self.arr[i]
-            if isinstance(s, int):
-                _arr[i] = s
-                interference = tile_interference[s]
-                _arr[i[0]:i[0]+3, i[1]:i[1]+3].view()
-                # for j in np.ndindex(interference.shape):
-                #     if j == (0, 0):
-                #         continue
-                #     p = i[0] + j[0], i[1] + j[1]
-                #     if p[0] >= _arr.shape[0] or p[1] >= _arr.shape[1]:
-                #         continue
-                #     _arr[p] &= interference[j]
-        self.arr = _arr
+        if not self.arr_placements.any():
+            return
+
+        for i in zip(*self.arr_placements.nonzero()):
+            s = self.arr_placements[i]
+            self.add_tile(s, i)
+            # for j in np.ndindex(interference.shape):
+            #     if j == (0, 0):
+            #         continue
+            #     p = i[0] + j[0], i[1] + j[1]
+            #     if p[0] >= _arr.shape[0] or p[1] >= _arr.shape[1]:
+            #         continue
+            #     _arr[p] &= interference[j]
 
     def calculate_placements(self):
         _arr = np.zeros(self.tree[0], dtype=int)
 
-        for i in np.ndindex(self.arr_placements.shape):
+        # for i in np.ndindex(self.arr_placements.shape):
+        for i in zip(*self.arr_placements.nonzero()):
             t = self.arr_placements[i]
-            if t > 0:
-                tile = tiles[t]
-                _arr[i[0]:i[0]+3, i[1]:i[1]+3] += tile
+            tile = tiles[t]
+            _arr[i[0]-2:i[0]+1, i[1]-2:i[1]+1] += tile
         return _arr
 
     # Update affected nearby positions
     def update(self, pos: tuple[int, int]):
+        tile = self.arr_placements[pos]
+        if tile == 0:
+            return
+
+        a = self.window(pos)
+        b = tile_interference[tile] # [:a.shape[0], :a.shape[1]]
+        a &= b
+
+        return
+
         for other_pos in it.product(
                 np.arange(max(0, pos[0]-2), min(self.size[0], pos[0]+3)),
                 np.arange(max(0, pos[1]-2), min(self.size[1], pos[1]+3))
@@ -265,7 +298,7 @@ class TileMap:
         if this == other:
             return False
 
-        this_tile = self.arr[this]
+        this_tile = self.arr_placements[this] if self.arr_placements[this] else self.arr[this]
         other_tile = self.arr[other]
 
         if isinstance(this_tile, int) and isinstance(other_tile, int):
@@ -274,13 +307,23 @@ class TileMap:
         if isinstance(this_tile, set) and isinstance(other_tile, set):
             return False
 
-        if isinstance(this_tile, int):
+        if isinstance(this_tile, np.int64):
+
             # Check for this tile's impact on other tiles
             _arr = self.arr[this[0]:other[0] + 1, this[1]:other[1] + 1].view()
             if _arr.shape > (0,0):  # other tile is below or right of this tile
                 offset = (_arr.shape[0]-1, _arr.shape[1]-1)
                 # this tile impacts other tile IFF this tile is fixed
                 other_tile &= tile_interference[this_tile][offset]
+                return True
+
+            _arr = self.arr[other[0]:this[0] + 1, other[1]:this[1] + 1].view()
+            if _arr.shape > (0,0):  # other tile is below or right of this tile
+                offset = (_arr.shape[0]-1, _arr.shape[1]-1)
+                # this tile impacts other tile IFF this tile is fixed
+                for x in list(other_tile):
+                    if this_tile not in tile_interference[x][offset]:
+                        other_tile.remove(x)
                 return True
 
         else:  # other_tile is int
@@ -293,17 +336,22 @@ class TileMap:
 
         return False
 
-
     def box_count(self) -> np.ndarray:
         return np.bincount(self.boxes().flatten(), minlength=len(self.ans)+1)[:-1]
 
     def tiles(self, arr=None) -> np.ndarray:
         if arr is None:
-            arr = self.arr_placements
+            arr = self.arr_placements[2:-2,2:-2]
         return np.vectorize(lambda x: x if isinstance(x, int) else 0)(arr)
 
     def boxes(self) -> np.ndarray:
         return np.vectorize(lambda x: tile_map_reverse[x] if x>0 else len(self.ans))(self.tiles())
+
+    def lens(self):
+        return np.vectorize(lambda x: len(x))(self.arr)-1
+
+    def len_order(self):
+        return zip(*np.unravel_index(np.argsort(self.lens(), axis=None, stable=True), self.arr.shape))
 
     def is_valid(self) -> bool:
         # All values between 0 and num(tiles), inclusive
@@ -325,6 +373,50 @@ class TileMap:
         if not len(total) == len(answer):
             return False
         return (total == answer).all()
+
+
+    def solve_simple(self):
+        total_box_area = sum(boxes[i].sum() * self.ans[i] for i in range(len(self.ans)))
+        return total_box_area <= self.tree[0][0] * self.tree[0][1]
+
+    def solve(self, recurse=True):
+        total_box_area = sum(boxes[i].sum() * self.ans[i] for i in range(len(self.ans)))
+        if total_box_area <= self.tree[0][0] * self.tree[0][1]:
+            return tuple()  # No solution possible
+
+        # if sum(self.ans) * 9 <= np.multiply(*self.tree[0]):
+        #     return self.ans
+        #
+        if self.is_solution():
+            return tuple(self.box_count().tolist())
+
+        # Solve loop
+        for pos in self.len_order():
+            if self.arr_placements[pos] > 0 or len(self[pos]) <= 1:
+                continue
+            ic(f'solve has options at {pos}: {self.arr[pos]}')
+            for t in list(self.arr[pos]):
+                if t > 0:
+                    b = tile_map_reverse[t]
+                    if self.box_count()[b] >= self.ans[b]:
+                        continue
+                    if t not in self.arr[pos]:
+                        continue
+
+                    ic(f'solve adds tile {t} at {pos}: {self.arr[pos]}')
+                    self.add_tile(t, pos)
+                    ic(self.budget)
+                    if self.is_solution():
+                        return tuple(self.box_count().tolist())
+                    if not recurse:
+                        return
+                    ans = self.solve()
+                    if ans:
+                        return ans
+                    ic(f'solve rems tile {self.arr_placements[pos]} at {pos}...')
+                    self.remove_tile(pos)
+        ic('No solution...')
+        return tuple()
 
 
 def calculate_interferences(arr, interference_arr=None) -> np.ndarray:
@@ -413,7 +505,7 @@ if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    text = text0
+    text = text1
     text = text.strip().split('\n\n')
 
     trees = text[-1].splitlines()
@@ -433,23 +525,20 @@ if __name__ == '__main__':
 
     init_tiles(boxes)
 
-    tree = trees[0]
-    tm = TileMap(tree)
-    print(tm)
+    ic.disable()
 
+    # pone = 0
+    # for t, tree in enumerate(trees):
+    #     tm = TileMap(tree)
+    #     print(f'Tree {t}: {tree}...')
+    #     tm.solve_simple()
+    #     if tm.is_solution():
+    #         print(f'Tree {t}: solved: {tm.ans}')
+    #         pone += 1
+    #     else:
+    #         print(f'Tree {t}: no solution.')
 
-
-
-    #
-    # To place boxes based on locator values:
-    # sp.signal.convolve(arr[4], tile_arr[4], mode='full')[:4,:4]
-
-    # for dims, contents in trees:
-        # area_available = dims[0] * dims[1]
-        # area_needed = sum([boxes[i].sum() * t for i, t in enumerate(contents)])
-        # if area_available > area_needed:
-        #     ic(f'Space available: {area_available}, needed: {area_needed}')
-
+    pone = sum(bool(TileMap(tree).solve_simple()) for tree in trees)
 
     print(f"AOC {year} day {day}  Part One: {pone}")
 
