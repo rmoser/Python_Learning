@@ -91,9 +91,9 @@ if __name__ == '__main__':
 
     print(f"AOC {year} day {day}  Part One: {pone}")
 
-    guards = asleep.max(axis='columns')
+    guards = asleep.end(axis='columns')
     guard = guards.idxmax()
-    t = asleep[asleep.index == guard].max().idxmax()
+    t = asleep[asleep.index == guard].end().idxmax()
 
     ptwo = guard * int(t)
 

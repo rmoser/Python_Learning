@@ -6,7 +6,7 @@ import aocd
 import math
 import itertools
 import scipy as sp
-from functools import lru_cache
+from functools import cache
 from scipy import ndimage
 from scipy.stats import false_discovery_control
 import pprint
@@ -18,9 +18,11 @@ import os
 DEFAULT_TRANSLATE = {ord('1'): '#', ord('0'): '·'}
 
 class BigInt:
-    def __init__(self, value : (int, np.int32, np.int64, BigInt)):
+    def __init__(self, value : (int, np.int32, np.int64, BigInt, dict)):
         if isinstance(value, BigInt):
             self.value = value.value.copy()
+        elif isinstance(value, dict):
+            self.value = value
         else:
             self.value = factor(value)
         self.__repr = np.int64(0)
@@ -53,6 +55,9 @@ class BigInt:
     def __add__(self, other):
         return BigInt(self.__repr + np.int64(other))
 
+    def __sub__(self, other):
+        return BigInt(self.__repr - np.int64(other))
+
     def __mul__(self, other : (int, np.int32, np.int64, BigInt)):
         if isinstance(other, BigInt):
             _value = other.value
@@ -66,6 +71,9 @@ class BigInt:
         _new.update()
         return _new
 
+    def __mod__(self, other):
+        return self - self.__floordiv__(other) * other
+
     def __floordiv__(self, other):
         if isinstance(other, BigInt):
             _value = other.value
@@ -74,13 +82,23 @@ class BigInt:
 
         _new = self.__copy__()
         for k, v in _value.items():
-            _new.value[k] = _new.value.get(k, np.int64(0)) - v
-
+            if k in _new.value:
+                _value[k] = min(v - _new.value[k], 0)
+                _new.value[k] = max(0, _new.value[k] - v)
         _new.update()
+        if any(_value.values()):
+            _new = BigInt(_new.__repr // BigInt(_value).__repr)
+
         return _new
 
-
-
+    def __neg__(self):
+        x = self.__copy__()
+        if -1 in self.value:
+            x.value.pop(-1)
+        else:
+            x.value[-1] = 1
+        x.update()
+        return x
 
 
 def text_format(text, foreground=None, background=None, style=None):
@@ -271,6 +289,48 @@ def valid_path(maze, start, end, paths=None, iters=-1, debug=False):
         if iters == 0:
             return paths, pos_dist
 
+def valid_path_net(maze, start, end, paths=None, iters=-1, debug=False):
+    if not paths:
+        paths = [[start]]
+    elif not isinstance(paths[0], list):
+        paths = [paths]
+
+    pos_dist = {start: 0}
+
+    # max_moves = np.prod(maze.shape)
+
+    result_paths = []
+
+    while True:
+        for _ in range(len(paths)):
+            path = paths.pop(0)
+            # if len(path) >= max_moves:
+            #     return []
+
+            pos = path[-1]
+            for new_pos in list(maze[pos]):
+                # new_pos = pos + move  # type is np.array
+                # new_pos_tuple = tuple(new_pos)
+                # if (new_pos < 0).any() or (new_pos >= maze.shape).any():
+                #     continue
+                if new_pos == end:
+                    pos_dist[new_pos] = len(path)  # len(path) includes the start point already, so no need to increment for the end point
+                    return path + [new_pos], pos_dist
+                if new_pos in pos_dist:  # Shorter path to this point already exists
+                    continue
+                paths.append(path + [new_pos])
+                pos_dist[new_pos] = len(path)  # len(path) includes the start point already, so no need to increment for the end point
+
+                if debug:
+                    print(pos, new_pos, path)
+
+            if debug:
+                print('\n Paths: ', paths)
+
+        iters -= 1
+        if iters == 0:
+            return paths, pos_dist
+
 
 def areas(maze):
     return ndimage.label(maze < 1)
@@ -281,30 +341,35 @@ def in_array(pos, arr):
     return (p >= 0).all() and (p < arr.shape).all()
 
 
-@lru_cache
+@cache
 def factor(n):
     d = {}
+
+    if n < 0:
+        d[-1] = 1
+        n = -n
+
     if n == 0:
         return {0: 1}
     if n == 1:
-        return {1: 1}
+        return d if d else {1: 1}
     if n < 4:
         d[n] = 1
         return d
 
-    for i in np.arange(2, int(n**0.5)+1, dtype=np.int64):
+    for i in range(2, int(n**0.5)+1):
         r = 0
         while r == 0:
             q, r = divmod(n, i)
             if r == 0:
-                d[i] = d.get(i, np.int64(0)) + 1
+                d[i] = d.get(i, 0) + 1
                 n //= i
     if n > 1:
         d[n] = 1
     return d
 
 
-@lru_cache
+@cache
 def is_prime(n):
     if n < 2:
         return False
@@ -347,3 +412,5 @@ if __name__ == '__main__':
     a = np.array([[1,2,3],[4,5,6],[7,8,9]])
     print(a)
     print(sum_neighbors(a))
+
+    print(factor(2))

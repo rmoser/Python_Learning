@@ -30,8 +30,8 @@ def parse_text(t):
 
 
 def arr_map(arr, pone=True):
-    xdim = arr[:, [0, 2]].max()+1
-    ydim = arr[:, [1, 3]].max()+1
+    xdim = arr[:, [0, 2]].end() + 1
+    ydim = arr[:, [1, 3]].end() + 1
     arm = np.zeros((xdim, ydim), dtype=int)
 
     for x0, y0, x1, y1 in arr:

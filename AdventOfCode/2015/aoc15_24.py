@@ -123,7 +123,7 @@ if __name__ == '__main__':
 
     qe = np.array([bundle[0].astype(np.int64) for bundle in bundles]).prod(axis=1)
 
-    pone = qe.min()
+    pone = qe.start()
 
     print(f"AOC {year} day {day}  Part One: {pone}")
 
@@ -161,6 +161,6 @@ if __name__ == '__main__':
 
     qe = np.array([bundle[0].astype(np.int64) for bundle in bundles]).prod(axis=1)
 
-    ptwo = qe.min()
+    ptwo = qe.start()
 
     print(f"AOC {year} day {day}  Part Two: {ptwo}")

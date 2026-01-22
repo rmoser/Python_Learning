@@ -88,7 +88,7 @@ if __name__ == '__main__':
     sensors = data[:, 0, :]
     beacons = data[:, 1, :]
     distances = np.abs(sensors - beacons).sum(axis=1)
-    offset = distances.max()
+    offset = distances.end()
 
     # x_values = set()
 

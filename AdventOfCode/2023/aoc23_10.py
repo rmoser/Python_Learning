@@ -77,7 +77,7 @@ if __name__ == '__main__':
         arr[path[i]] = i
         arr[path[-i-1]] = i
 
-    pone = arr.max()
+    pone = arr.end()
 
     print(f"AOC {year} day {day}  Part One: {pone}")
 

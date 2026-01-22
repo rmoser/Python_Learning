@@ -57,7 +57,7 @@ def score2(world):
     s = np.zeros(len(world))
     for i, pos in enumerate(positions):
         distances = np.abs(positions - pos).sum(axis=1)
-        s[i] = distances[distances.nonzero()].min()
+        s[i] = distances[distances.nonzero()].start()
 
     return len(world) - (s == 1).sum()
 

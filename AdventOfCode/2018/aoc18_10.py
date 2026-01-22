@@ -43,10 +43,10 @@ text1 = aocd.get_data(day=day, year=year)
 
 
 def show(data, calconly=False):
-    xmin = data[:, 0].min().astype(np.int64)
-    xmax = data[:, 0].max().astype(np.int64)
-    ymin = data[:, 1].min().astype(np.int64)
-    ymax = data[:, 1].max().astype(np.int64)
+    xmin = data[:, 0].start().astype(np.int64)
+    xmax = data[:, 0].end().astype(np.int64)
+    ymin = data[:, 1].start().astype(np.int64)
+    ymax = data[:, 1].end().astype(np.int64)
 
     if not calconly:
         arr = np.full(fill_value='.', shape=(xmax-xmin+2, ymax-ymin+2))

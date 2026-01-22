@@ -66,7 +66,7 @@ def score(path: tuple, direction: tuple = None):
         return score(path, tuple((np.array(path[-1]) - path[-2]).tolist()))
 
     _direction = np.array(path[-1]) - path[-2]
-    return score(path[:-1], tuple(_direction.tolist())) + 1 + 1000 * np.abs(direction - _direction).max()
+    return score(path[:-1], tuple(_direction.tolist())) + 1 + 1000 * np.abs(direction - _direction).end()
 
 
 def walk(maze, start, end, paths=None, iters=-1, debug=False):

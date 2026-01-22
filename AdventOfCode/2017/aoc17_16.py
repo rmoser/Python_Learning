@@ -61,7 +61,7 @@ def dance(s, steps):
         s = np.array(list(s), dtype=str)
     if isinstance(s[0], str):
         s = np.vectorize(ord)(s)
-        s -= s.min()
+        s -= s.start()
     for line in steps.split(','):
         if DEBUG:
             print(show(s))

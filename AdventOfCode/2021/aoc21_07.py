@@ -11,7 +11,7 @@ text1 = aocd.get_data(day=day, year=2021)
 
 
 def get_min_distance(arr, cost_f):
-    mat = np.array([cost_f(arr-i) for i in np.arange(arr.max())])
+    mat = np.array([cost_f(arr-i) for i in np.arange(arr.end())])
     print(mat)
     dists = mat.sum(axis=1)
     idx = np.argsort(dists)[0]
