@@ -4,6 +4,8 @@ day = 0
 
 import numpy as np
 import aocd
+import itertools as it
+from icecream import ic
 
 text0 = """
 """
