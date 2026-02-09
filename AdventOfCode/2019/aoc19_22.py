@@ -41,7 +41,10 @@ cut -1
 """
 
 text1 = aocd.get_data(day=day, year=year)
-global text
+global text, instructions
+m = None
+b = None
+
 
 @cache
 def deal_with_increment(n, l):
@@ -76,6 +79,23 @@ def run(n, value):
         # ic(n, idx)
     return idx
 
+def run3(n, value):
+    values = [value]
+    values_set = set()
+    idx = value
+    i = 0
+    while True:
+        i += 1
+        idx = run(n, idx)
+        values.append(idx)
+        if idx in values_set:
+            return values
+        values_set.add(idx)
+        if i == 1000000:
+            return values
+
+
+
 def run2(n, value, cycles):
     b = run(n, 0)
     m = run(n, 1) % n
@@ -104,6 +124,28 @@ def run0(n):
         # ic(n, idx)
     return arr
 
+def steps(n):
+    arr = np.zeros((n, len(instructions)+1), dtype=int)
+    arr[:, 0] = np.arange(n)
+
+    for row in range(n):
+        for i, line in enumerate(instructions):
+            if line == 'deal into new stack':
+                arr[:, i+1] = arr[::-1, i]
+                continue
+
+            if line.startswith('deal with increment '):
+                increment = int(line.split(' ')[-1])
+                # idx = (idx * increment) % n
+                arr[:, i+1] = arr[deal_with_increment(increment, len(arr)), i]
+                continue
+
+            if line.startswith('cut '):
+                increment = int(line.split(' ')[-1])
+                # idx = (idx - increment) % n
+                arr[:, i+1] = np.roll(arr[:, i], -(increment % len(arr)))
+    return arr
+
 def _test_run(n, text):
     arr = np.zeros(n, dtype=int)
     for i in range(n):
@@ -115,33 +157,36 @@ if __name__ == '__main__':
     pone = ''
     ptwo = ''
 
-    text = text0
+    text = text1
     if text == text1:
-        n = 10007, 119315717514047
+        _n = 10007, 119315717514047
     else:
-        n = 10, 10
+        _n = 10, 10
+    instructions = text.strip().splitlines()
 
-    pone = run2(n[0], 2019, 1)
+    pone = run(_n[0], 2019)
     print(f"AOC {year} day {day}  Part One: {pone}")
 
-    # idx0 = run(n[1], 2020)
+    n = _n[1]
+    id0 = 2020
+    id1 = run(n, id0)
+    b = id0
+    m = (id1-id0) % n
 
-    # iters = 1
-    # idx = idx0
-    # while True:
-    #     idx = run(n[1], idx)
-    #     iters += 1
-    #     ic(iters, idx)
-    #     if idx == 2020:
-    #         break
-    #
-    # ic(iters)
+    def p(i, t, n):
+        return (b*(m+1)**int(t-1)%n + (i*m**t)%n) % n
 
-    # idx = 2020
-    # for i in range(101741582076661):
-    #     idx = run(n[1], idx)
-    #     print('\r', i, idx, end='\t\t\t\t\t\t')
-    #
-    # ptwo = idx
+    # def p(i, t, n):
+    #     return (b + i*m) % n
+
+    data = np.zeros(10, dtype=int)
+    data[0] = 2019
+    for i in range(1, 10):
+        data[i] = run(_n[0], data[i-1])
+
+    xarr = run3(_n[1], 2020)
+
+
+    # ptwo = p(2020, 101741582076661, n[1])
 
     print(f"AOC {year} day {day}  Part Two: {ptwo}")

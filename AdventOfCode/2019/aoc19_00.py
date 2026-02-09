@@ -2,10 +2,13 @@
 year = 2019
 day = 0
 
+import sys
+sys.path.extend([r'.\AdventOfCode\2019'])
 import numpy as np
 import aocd
 import itertools as it
 from icecream import ic
+from aoc19_amp import Amp
 
 text0 = """
 """
