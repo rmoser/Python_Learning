@@ -40,6 +40,8 @@ deal with increment 3
 cut -1
 """
 
+text0 = """deal into new stack"""
+
 text1 = aocd.get_data(day=day, year=year)
 global text
 
