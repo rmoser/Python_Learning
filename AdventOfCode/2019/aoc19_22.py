@@ -41,11 +41,14 @@ cut -1
 """
 
 text0 = """deal into new stack"""
+text0 = """cut -2"""
+text0 = """deal with increment 7"""
 
 text1 = aocd.get_data(day=day, year=year)
 global text, instructions
 m = None
 b = None
+
 
 
 @cache
@@ -63,7 +66,7 @@ def run(n, value):
 
     for line in text.splitlines():
         if line == 'deal into new stack':
-            idx = n - idx -1
+            idx = (n-idx-1) % n
             # arr = arr[::-1]
             continue
 
@@ -76,6 +79,62 @@ def run(n, value):
         if line.startswith('cut '):
             increment = int(line.split(' ')[-1])
             idx = (idx - increment) % n
+            # arr = np.roll(arr, -(n % len(arr)))
+
+        # ic(n, idx)
+    return idx
+
+@cache
+def run_rev(n, value):
+    idx = value
+    # arr = np.array(range(n), dtype=int)
+
+    for line in text.splitlines()[::-1]:
+        if line == 'deal into new stack':
+            idx = (n-idx-1) % n
+            # arr = arr[::-1]
+            continue
+
+        if line.startswith('deal with increment '):
+            increment = int(line.split(' ')[-1])
+            for i in range(increment):
+                # ic(idx, i, n, increment, (idx + i * n) % increment)
+                x = (idx + i * n)
+                if x % increment == 0:
+                    idx = x // increment
+                    break
+            continue
+            # idx = (idx * increment) % n
+            # arr = arr[deal_with_increment(n, len(arr))]
+
+        if line.startswith('cut '):
+            increment = int(line.split(' ')[-1])
+            idx = (idx + increment) % n
+            # arr = np.roll(arr, -(n % len(arr)))
+
+        # ic(n, idx)
+    return idx
+
+@cache
+def _run(n, value):
+    idx = value
+    # arr = np.array(range(n), dtype=int)
+
+    for line in text.splitlines():
+        if line == 'deal into new stack':
+            idx = (n-idx-1)
+            # arr = arr[::-1]
+            continue
+
+        if line.startswith('deal with increment '):
+            increment = int(line.split(' ')[-1])
+            idx = (idx * increment)
+            # arr = arr[deal_with_increment(n, len(arr))]
+            continue
+
+        if line.startswith('cut '):
+            increment = int(line.split(' ')[-1])
+            idx = (idx - increment)
             # arr = np.roll(arr, -(n % len(arr)))
 
         # ic(n, idx)
@@ -169,25 +228,37 @@ if __name__ == '__main__':
     pone = run(_n[0], 2019)
     print(f"AOC {year} day {day}  Part One: {pone}")
 
-    n = _n[1]
-    id0 = 2020
-    id1 = run(n, id0)
-    b = id0
-    m = (id1-id0) % n
-
-    def p(i, t, n):
-        return (b*(m+1)**int(t-1)%n + (i*m**t)%n) % n
-
+    # n = _n[1]
+    # id0 = 2020
+    # id1 = run(n, id0)
+    # b = id0
+    # m = (id1-id0) % n
+    #
+    # def p(idx_t0, cycles, n):
+    #     return (b * (m+1) ** int(cycles - 1) % n + (idx_t0 * m ** cycles) % n) % n
+    #
     # def p(i, t, n):
     #     return (b + i*m) % n
 
-    data = np.zeros(10, dtype=int)
-    data[0] = 2019
-    for i in range(1, 10):
-        data[i] = run(_n[0], data[i-1])
 
-    xarr = run3(_n[1], 2020)
+    # Failed looking for linear function
+    # run.cache_clear()
+    # n = _n[1]
+    # data = np.zeros(10, dtype=int)
+    # data[0] = 19
+    # for i in range(1, 10):
+    #     data[i] = _run(n, data[i-1])
+    # data_delta = data[1:] - data[:-1]
+    #
+    # value = np.zeros((10,100), dtype=int)
+    # value[0] = np.arange(100)
+    # for i in range(1, 10):
+    #     value[i] = np.vectorize(lambda x: run(n, x))(value[i-1])
 
+    # xarr = run3(_n[1], 2020)
+
+
+    # Try to reverse function
 
     # ptwo = p(2020, 101741582076661, n[1])
 
